@@ -1,0 +1,122 @@
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Design Tokens (디자인 변수) */
+@import "./variables.css";
+
+
+/**
+ * ============================================
+ * 🌐 Global Styles (전역 스타일)
+ * ============================================
+ */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/**
+ * ============================================
+ * 🎨 Custom Utility Classes (커스텀 유틸리티)
+ * ============================================
+ *
+ * 범용적으로 사용하는 유틸리티 클래스만 정의합니다.
+ * 컴포넌트 전용 스타일은 shared/ui 컴포넌트에서 관리하세요.
+ */
+
+/* 텍스트 균형 */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* 그라데이션 텍스트 (브랜드) */
+.text-gradient-brand {
+  background: linear-gradient(
+    to right,
+    var(--color-brand-primary-400),
+    var(--color-brand-accent-emerald),
+    var(--color-brand-accent-teal)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glow 효과 */
+.glow-green {
+  box-shadow: var(--shadow-glow-green);
+}
+
+.glow-emerald {
+  box-shadow: var(--shadow-glow-emerald);
+}
+
+
+/**
+ * ============================================
+ * 🎬 Animations (애니메이션)
+ * ============================================
+ */
+@keyframes glow {
+  0%,
+  100% {
+    text-shadow: 0 0 20px rgba(74, 222, 128, 0.5),
+      0 0 40px rgba(74, 222, 128, 0.3), 0 0 60px rgba(74, 222, 128, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 30px rgba(74, 222, 128, 0.8),
+      0 0 60px rgba(74, 222, 128, 0.5), 0 0 90px rgba(74, 222, 128, 0.3);
+  }
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+
+/**
+ * ============================================
+ * 💡 Usage Guide (사용 가이드)
+ * ============================================
+ *
+ * 📁 파일 구조:
+ *
+ * src/app/styles/
+ * ├── index.css          # 전역 스타일, 유틸리티, 애니메이션
+ * └── variables.css      # 디자인 토큰 (색상, 폰트, 효과 등)
+ *
+ * src/shared/ui/
+ * ├── Button.tsx         # 버튼 컴포넌트 + 스타일
+ * ├── Card.tsx           # 카드 컴포넌트 + 스타일
+ * └── ...
+ *
+ *
+ * 📝 사용 예시:
+ *
+ * 1. 디자인 변수 사용:
+ *    <div className="bg-brand-primary-500 text-white">
+ *
+ * 2. 커스텀 유틸리티:
+ *    <h1 className="text-gradient-brand animate-glow">
+ *
+ * 3. 컴포넌트:
+ *    import { Button } from '@/shared/ui'
+ *    <Button variant="primary">클릭</Button>
+ *
+ *
+ * 🎨 디자이너가 왔을 때:
+ *
+ * 1. variables.css만 수정하면 전체 프로젝트에 반영
+ * 2. 새 컴포넌트 스타일은 shared/ui에서 관리
+ * 3. 범용 유틸리티만 이 파일에 추가
+ *
+ *
+ * ⚠️ 주의사항:
+ *
+ * - 컴포넌트 프리셋(.btn, .card 등)은 이 파일에 두지 마세요(ui 컴포넌트 내부 정의)
+ * - 이유: 응집도, 재사용성, 트리쉐이킹
+ */

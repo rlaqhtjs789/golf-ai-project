@@ -1,0 +1,30 @@
+{
+  "home": {
+    "title": "AI Swing Analysis",
+    "subtitle": "Improve your swing with GTS AI.",
+    "startButton": "START",
+    "processTitle": "Swing Analysis & Improvement Process",
+    "steps": {
+      "step1": {
+        "title": "Start GTS-AI",
+        "description": "Begin the GTS-AI solution."
+      },
+      "step2": {
+        "title": "Analyze My Swing",
+        "description": "Analyze swing and shot data."
+      },
+      "step3": {
+        "title": "Diagnosis Report",
+        "description": "Identify issues."
+      },
+      "step4": {
+        "title": "Issue Report",
+        "description": "Detailed analysis of issues."
+      },
+      "step5": {
+        "title": "Focused Practice",
+        "description": "Solve with GTS-AI's optimal solution."
+      }
+    }
+  }
+}

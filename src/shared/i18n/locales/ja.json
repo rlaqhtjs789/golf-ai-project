@@ -1,0 +1,30 @@
+{
+  "home": {
+    "title": "AIスイング診断",
+    "subtitle": "GTS AIと一緒に問題を改善しましょう。",
+    "startButton": "START",
+    "processTitle": "スイング診断と改善プロセス",
+    "steps": {
+      "step1": {
+        "title": "GTS-AI開始",
+        "description": "GTS-AIソリューションを開始します。"
+      },
+      "step2": {
+        "title": "スイング診断",
+        "description": "スイングとショットデータを診断します。"
+      },
+      "step3": {
+        "title": "診断レポート",
+        "description": "問題点を把握します。"
+      },
+      "step4": {
+        "title": "問題点レポート",
+        "description": "問題点を詳しく分析します。"
+      },
+      "step5": {
+        "title": "集中練習",
+        "description": "GTS-AIの最適なソリューションで解決します。"
+      }
+    }
+  }
+}
