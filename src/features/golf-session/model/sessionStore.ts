@@ -25,6 +25,8 @@ const initialState = {
   solutionData: null,
   firstSwingProgress: 0,
   secondSwingProgress: 0,
+  swingHistory: [],
+  swingCount: 1,
 }
 
 /**
@@ -110,6 +112,51 @@ export const useSessionStore = create<SessionState>()(
         ),
 
       /**
+       * 스윙 데이터를 히스토리에 추가 (FIFO 5개 유지)
+       *
+       * FIFO 로직:
+       * - 1~5번째 스윙: 순서대로 추가
+       * - 6번째 이상: 첫 번째 데이터 유지 + 가장 최근 4개만 유지
+       * 예: [swing1, swing2, swing3, swing4, swing5] → [swing1, swing3, swing4, swing5, swing6]
+       */
+      addSwingToHistory: (data) =>
+        set(
+          (state) => {
+            const newHistory = [...state.swingHistory, data]
+            let history = newHistory
+
+            // 6개 이상이면 FIFO 처리 (첫 번째 유지 + 최근 4개)
+            if (newHistory.length > 5) {
+              history = [newHistory[0], ...newHistory.slice(-4)]
+            }
+
+            return { swingHistory: history }
+          },
+          false,
+          'session/addSwingToHistory'
+        ),
+
+      /**
+       * 스윙 횟수 업데이트
+       */
+      setSwingCount: (count) =>
+        set(
+          { swingCount: count },
+          false,
+          'session/setSwingCount'
+        ),
+
+      /**
+       * 스윙 히스토리만 초기화 (새로운 스윙하기)
+       */
+      resetSwingHistory: () =>
+        set(
+          { swingHistory: [], swingCount: 1 },
+          false,
+          'session/resetSwingHistory'
+        ),
+
+      /**
        * 전체 세션 초기화 (처음으로 돌아가기)
        */
       reset: () =>
@@ -144,3 +191,5 @@ export const selectSecondSwingData = (state: SessionState) => state.secondSwingD
 export const selectSolutionData = (state: SessionState) => state.solutionData
 export const selectFirstSwingProgress = (state: SessionState) => state.firstSwingProgress
 export const selectSecondSwingProgress = (state: SessionState) => state.secondSwingProgress
+export const selectSwingHistory = (state: SessionState) => state.swingHistory
+export const selectSwingCount = (state: SessionState) => state.swingCount

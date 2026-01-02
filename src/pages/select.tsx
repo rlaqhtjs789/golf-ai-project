@@ -80,15 +80,16 @@ function SelectPage() {
     console.log('클럽:', selectedClub)
     console.log('전체 데이터:', { selectedGender, selectedAge, selectedHandicap, selectedClub })
 
-    // TODO: 향후 API 전송 부분
-    // 예시:
-    // const data = {
+    // 🔗 API 연동 지점: 사용자 정보 저장
+    // TODO: POST /api/user/profile (사용자 정보 저장)
+    // Request body:
+    // {
     //   gender: selectedGender,
     //   ageRange: selectedAge,
     //   handicap: selectedHandicap,
     //   club: selectedClub
     // }
-    // await api.post('/swing-analysis', data)
+    // 응답: userId 또는 sessionId (향후 스윙 데이터 저장 시 필요)
 
     // 세션 초기화 (처음부터 다시 시작)
     reset()

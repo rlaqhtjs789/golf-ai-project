@@ -44,11 +44,13 @@ export interface SwingMeasurement {
 /**
  * 10번 스윙의 전체 데이터
  *
+ * @property swingNumber - 스윙 번호 (1번째, 2번째, 3번째...)
  * @property measurements - 10개의 스윙 측정값 배열
  * @property averages - 평균값
  * @property completedAt - 완료 시간
  */
 export interface SwingData {
+  swingNumber: number
   measurements: SwingMeasurement[]
   averages: {
     clubSpeed: number
@@ -116,6 +118,12 @@ export interface SessionState {
   // 두 번째 스윙 진행 상태 (0~10)
   secondSwingProgress: number
 
+  // 스윙 히스토리 (최대 5개 FIFO)
+  swingHistory: SwingData[]
+
+  // 현재 스윙 횟수 (1=first, 2=second, 3=repeat1, etc.)
+  swingCount: number
+
   // Actions
   setStep: (step: SessionStep) => void
   setFirstSwingProgress: (progress: number) => void
@@ -123,5 +131,8 @@ export interface SessionState {
   saveFirstSwingData: (data: SwingData) => void
   saveSecondSwingData: (data: SwingData) => void
   saveSolutionData: (data: SolutionData) => void
+  addSwingToHistory: (data: SwingData) => void
+  setSwingCount: (count: number) => void
+  resetSwingHistory: () => void
   reset: () => void
 }

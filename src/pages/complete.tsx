@@ -7,15 +7,35 @@
  * - 개선 결과 요약
  * - 처음으로 돌아가기
  * - 추가 솔루션 제안 (향후 구현 예정)
+ * - 게임스러운 confetti 효과
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSessionStore, selectCurrentStep } from '@/features/golf-session/model/sessionStore'
+
+const CONFETTI_COLORS = [
+  '#a855f7',
+  '#06b6d4',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#ec4899',
+  '#8b5cf6',
+] as const
 
 function CompletePage() {
   const navigate = useNavigate()
   const currentStep = useSessionStore(selectCurrentStep)
   const { reset } = useSessionStore()
+  const [confetti] = useState<Array<{ id: number; left: number; delay: number; duration: number; color: string }>>(() =>
+    Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 0.5,
+      duration: 3 + Math.random() * 2,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    }))
+  )
 
   useEffect(() => {
     // complete 단계가 아니면 홈으로 리다이렉트
@@ -38,7 +58,27 @@ function CompletePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 overflow-hidden">
+      {/* 게임스러운 Confetti 효과 */}
+      {confetti.map((piece) => (
+        <div
+          key={piece.id}
+          className="fixed pointer-events-none"
+          style={{
+            left: `${piece.left}%`,
+            top: '-20px',
+            animation: `confetti-fall ${piece.duration}s linear ${piece.delay}s forwards`,
+          }}>
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{
+              backgroundColor: piece.color,
+              boxShadow: `0 0 10px ${piece.color}`,
+            }}
+          />
+        </div>
+      ))}
+
       <div className="max-w-4xl w-full text-center">
         {/* 축하 메시지 */}
         <div className="mb-12 animate-fade-in">
@@ -112,6 +152,32 @@ function CompletePage() {
 
         .animate-fade-in {
           animation: fade-in 0.8s ease-out;
+        }
+
+        @keyframes confetti-fall {
+          0% {
+            opacity: 1;
+            transform: translateY(0) rotateZ(0deg) scale(1);
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(100vh) rotateZ(720deg) scale(0);
+          }
+        }
+
+        @keyframes confetti-swing {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          25% {
+            transform: translateX(20px);
+          }
+          75% {
+            transform: translateX(-20px);
+          }
         }
       `}</style>
     </div>

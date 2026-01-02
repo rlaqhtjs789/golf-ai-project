@@ -9,7 +9,9 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSessionStore, selectCurrentStep, selectFirstSwingProgress, selectSecondSwingProgress } from '@/features/golf-session/model/sessionStore'
+import { useSessionStore, selectCurrentStep, selectFirstSwingProgress, selectSecondSwingProgress, selectSwingCount } from '@/features/golf-session/model/sessionStore'
+import type { SwingData } from '@/features/golf-session/types/session.type'
+import { SWING_COUNT_PER_SESSION } from '@/shared/constants/swing'
 
 type SwingPhase = 'initial' | 'swinging' | 'loading'
 
@@ -20,6 +22,7 @@ const getInitialMeasurement = () => ({
   launchAngle: '0',
   direction: '-',
   lateralDistance: '0',
+  distance: '0',
   sideSpin: '-',
   backSpin: '0',
   ballFlight: '-',
@@ -32,6 +35,7 @@ const generateMockData = () => ({
   launchAngle: (18 + Math.random() * 5).toFixed(1),
   direction: Math.random() > 0.5 ? `L${(Math.random() * 2).toFixed(1)}` : `R${(Math.random() * 2).toFixed(1)}`,
   lateralDistance: (1 + Math.random() * 3).toFixed(1),
+  distance: (200 + Math.random() * 70).toFixed(1),
   sideSpin: `${Math.random() > 0.5 ? 'R' : 'L'}${Math.floor(300 + Math.random() * 300)}`,
   backSpin: String(Math.floor(4000 + Math.random() * 1000)),
   ballFlight: ['슬라이스', '훅', '스트레이트'][Math.floor(Math.random() * 3)],
@@ -42,10 +46,12 @@ function SwingPage() {
   const currentStep = useSessionStore(selectCurrentStep)
   const firstSwingProgress = useSessionStore(selectFirstSwingProgress)
   const secondSwingProgress = useSessionStore(selectSecondSwingProgress)
-  const { setStep, setFirstSwingProgress, setSecondSwingProgress } = useSessionStore()
+  const swingCount = useSessionStore(selectSwingCount)
+  const { setStep, setFirstSwingProgress, setSecondSwingProgress, addSwingToHistory, setSwingCount } = useSessionStore()
 
   const [phase, setPhase] = useState<SwingPhase>('initial')
   const [currentMeasurement, setCurrentMeasurement] = useState(getInitialMeasurement())
+  const [measurements, setMeasurements] = useState<Array<typeof currentMeasurement>>([])
 
   // 첫 번째 스윙인지 두 번째 스윙인지 확인
   const isFirstSwing = currentStep === 'swing-first'
@@ -80,20 +86,22 @@ function SwingPage() {
   useEffect(() => {
     if (phase !== 'swinging') return
 
-    // 10개 완료 시 로딩 단계로 전환
-    if (swingProgress >= 10) {
+    // SWING_COUNT_PER_SESSION개 완료 시 로딩 단계로 전환
+    if (swingProgress >= SWING_COUNT_PER_SESSION) {
       const loadingTimer = setTimeout(() => {
         setPhase('loading')
       }, 100)
       return () => clearTimeout(loadingTimer)
     }
 
-    // Phase 2: 스윙 진행 (10개 카운팅)
+    // Phase 2: 스윙 진행 (SWING_COUNT_PER_SESSION개 카운팅)
     const swingTimer = setTimeout(() => {
       const nextProgress = swingProgress + 1
       setSwingProgress(nextProgress)
-      // 측정값 업데이트
-      setCurrentMeasurement(generateMockData())
+      // 측정값 생성 및 수집
+      const newMeasurement = generateMockData()
+      setCurrentMeasurement(newMeasurement)
+      setMeasurements((prev) => [...prev, newMeasurement])
     }, 1500) // 1.5초마다 1개씩 카운팅
 
     return () => clearTimeout(swingTimer)
@@ -105,6 +113,41 @@ function SwingPage() {
     // Phase 3: 로딩 (2초 후 솔루션 페이지로 이동)
     const loadingTimer = setTimeout(() => {
       console.log('[swing] 로딩 완료, 상태 설정 시작')
+
+      // SwingData 생성 및 저장
+      if (measurements.length === SWING_COUNT_PER_SESSION) {
+        const swingData: SwingData = {
+          swingNumber: swingCount,
+          measurements: measurements.map((m, index) => ({
+            swingNumber: index + 1,
+            clubSpeed: parseFloat(m.clubSpeed),
+            ballSpeed: parseFloat(m.ballSpeed),
+            distance: parseFloat(m.distance),
+            angle: parseFloat(m.launchAngle),
+            spin: 0, // placeholder
+            timestamp: Date.now(),
+          })),
+          averages: {
+            clubSpeed: measurements.reduce((sum, m) => sum + parseFloat(m.clubSpeed), 0) / SWING_COUNT_PER_SESSION,
+            ballSpeed: measurements.reduce((sum, m) => sum + parseFloat(m.ballSpeed), 0) / SWING_COUNT_PER_SESSION,
+            distance: measurements.reduce((sum, m) => sum + parseFloat(m.distance), 0) / SWING_COUNT_PER_SESSION,
+            angle: measurements.reduce((sum, m) => sum + parseFloat(m.launchAngle), 0) / SWING_COUNT_PER_SESSION,
+            spin: 0,
+          },
+          completedAt: Date.now(),
+        }
+
+        // 🔗 API 연동 지점 1: 스윙 데이터 서버 저장
+        // TODO: POST /api/swings/save (swingData 저장)
+        // 응답: 저장된 스윙 ID 또는 성공 여부
+
+        // 🔗 API 연동 후: 다음 3개 라인 제거 (세션 저장 불필요)
+        // 히스토리에 추가 (현재는 세션 저장, API 연동 후 제거 가능)
+        console.log('[swing] addSwingToHistory 호출, swingCount:', swingCount)
+        addSwingToHistory(swingData)
+        setSwingCount(swingCount + 1)
+      }
+
       // 첫 번째 스윙이면 solution-video, 두 번째 스윙이면 solution-chart로 설정
       if (isFirstSwing) {
         console.log('[swing] isFirstSwing 감지, setStep(solution-video) 호출')
@@ -120,7 +163,7 @@ function SwingPage() {
     }, 2000)
 
     return () => clearTimeout(loadingTimer)
-  }, [phase, navigate, isFirstSwing, setStep])
+  }, [phase, navigate, isFirstSwing, setStep, measurements, swingCount, addSwingToHistory, setSwingCount])
 
   // Phase 1: 초기 안내
   if (phase === 'initial') {
@@ -128,7 +171,7 @@ function SwingPage() {
       <div className="min-h-full flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-100">
-            {isFirstSwing ? '평소 리듬으로 스윙을 10회 해주세요.' : '연습한대로, 다시 스윙 해주세요.'}
+            {isFirstSwing ? `평소 리듬으로 스윙을 ${SWING_COUNT_PER_SESSION}회 해주세요.` : '연습한대로, 다시 스윙 해주세요.'}
           </h1>
         </div>
       </div>
@@ -163,10 +206,10 @@ function SwingPage() {
   // Phase 2: 스윙 진행
   return (
     <div className="min-h-full flex flex-col py-8 px-4">
-      {/* 상단: 10개 체크박스 */}
+      {/* 상단: SWING_COUNT_PER_SESSION개 체크박스 */}
       <div className="mb-8 animate-fade-in">
         <div className="flex justify-center gap-4 flex-wrap max-w-4xl mx-auto">
-          {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+          {Array.from({ length: SWING_COUNT_PER_SESSION }, (_, i) => i + 1).map((num) => (
             <div
               key={num}
               className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full border-4 transition-all duration-500 ${
