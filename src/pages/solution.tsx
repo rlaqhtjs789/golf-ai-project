@@ -105,8 +105,9 @@ const SECOND_SWING_QUALITY_DATA = [
 function SolutionPage() {
   const navigate = useNavigate()
   const currentStep = useSessionStore(selectCurrentStep)
-  const { setStep, setSecondSwingProgress } = useSessionStore()
+  const { setStep, setFirstSwingProgress, setSecondSwingProgress } = useSessionStore()
   const [selectedVideo, setSelectedVideo] = useState<typeof MOCK_VIDEOS[0] | null>(null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   useEffect(() => {
     // swing 단계에서 넘어오는 경우를 허용하기 위해 조건 변경
@@ -122,27 +123,43 @@ function SolutionPage() {
     }
   }, [currentStep, navigate])
 
-  // swing 단계에서 진입한 경우 올바른 solution 단계로 설정
-  useEffect(() => {
-    if (currentStep === 'swing-first') {
-      setStep('solution-video')
-    }
-    // swing-second는 swing 페이지에서 직접 처리하므로 여기서는 변환하지 않음
-  }, [currentStep, setStep])
+  // 비디오형: 다시 스윙하러가기 (두 번째 스윙으로)
+  const handleGoToSwing = () => {
+    setIsTransitioning(true)
+    setStep('swing-second')
+    setSecondSwingProgress(0)
+    // isTransitioning이 true이므로 아무 UI도 렌더링되지 않음
+    Promise.resolve().then(() => {
+      navigate('/swing')
+    })
+  }
+
+  // 차트형: 다시 스윙 연습하기 (첫 번째 스윙으로 초기화)
+  const handleRetrySwing = () => {
+    console.log('[solution-handleRetrySwing] 시작')
+    console.log('[solution-handleRetrySwing] currentStep:', currentStep)
+    setIsTransitioning(true)
+    setFirstSwingProgress(0)
+    console.log('[solution-handleRetrySwing] setFirstSwingProgress(0) 호출')
+    setStep('swing-first')
+    console.log('[solution-handleRetrySwing] setStep(swing-first) 호출')
+    // isTransitioning이 true이므로 아무 UI도 렌더링되지 않음
+    Promise.resolve().then(() => {
+      console.log('[solution-handleRetrySwing] Promise.then 에서 navigate 호출')
+      navigate('/swing')
+    })
+  }
+
+  // 홈으로 이동
+  const handleGoHome = () => {
+    navigate('/')
+  }
 
   const isVideoType = currentStep === 'solution-video'
 
-  // 다시 스윙하러가기
-  const handleGoToSwing = () => {
-    setStep('swing-second')
-    setSecondSwingProgress(0)
-    navigate('/swing')
-  }
-
-  // 완료 (마지막 페이지로)
-  const handleComplete = () => {
-    setStep('complete')
-    navigate('/complete')
+  // 전환 중이면 아무것도 렌더링하지 않음
+  if (isTransitioning) {
+    return <div />
   }
 
   // 영상형 렌더링
@@ -518,16 +535,16 @@ function SolutionPage() {
 
       </div>
 
-      {/* 하단: 완료 버튼 */}
+      {/* 하단: 버튼 */}
       <div className="mt-20 flex gap-4 justify-center flex-wrap">
         <button
-          onClick={handleComplete}
+          onClick={handleRetrySwing}
           className="px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
-          완료 (마지막 페이지로)
+          다시 스윙 연습하기
         </button>
 
         <button
-          onClick={() => navigate('/')}
+          onClick={handleGoHome}
           className="px-8 py-4 bg-slate-700 text-white font-bold text-lg rounded-xl hover:bg-slate-600 transition-colors">
           처음으로
         </button>

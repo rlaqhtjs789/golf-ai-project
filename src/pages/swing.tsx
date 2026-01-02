@@ -13,6 +13,18 @@ import { useSessionStore, selectCurrentStep, selectFirstSwingProgress, selectSec
 
 type SwingPhase = 'initial' | 'swinging' | 'loading'
 
+// 초기 측정 데이터
+const getInitialMeasurement = () => ({
+  clubSpeed: '0',
+  ballSpeed: '0',
+  launchAngle: '0',
+  direction: '-',
+  lateralDistance: '0',
+  sideSpin: '-',
+  backSpin: '0',
+  ballFlight: '-',
+})
+
 // 임시 측정 데이터 생성 함수
 const generateMockData = () => ({
   clubSpeed: (48 + Math.random() * 5).toFixed(1),
@@ -21,7 +33,7 @@ const generateMockData = () => ({
   direction: Math.random() > 0.5 ? `L${(Math.random() * 2).toFixed(1)}` : `R${(Math.random() * 2).toFixed(1)}`,
   lateralDistance: (1 + Math.random() * 3).toFixed(1),
   sideSpin: `${Math.random() > 0.5 ? 'R' : 'L'}${Math.floor(300 + Math.random() * 300)}`,
-  backSpin: Math.floor(4000 + Math.random() * 1000),
+  backSpin: String(Math.floor(4000 + Math.random() * 1000)),
   ballFlight: ['슬라이스', '훅', '스트레이트'][Math.floor(Math.random() * 3)],
 })
 
@@ -33,7 +45,7 @@ function SwingPage() {
   const { setStep, setFirstSwingProgress, setSecondSwingProgress } = useSessionStore()
 
   const [phase, setPhase] = useState<SwingPhase>('initial')
-  const [currentMeasurement, setCurrentMeasurement] = useState(generateMockData())
+  const [currentMeasurement, setCurrentMeasurement] = useState(getInitialMeasurement())
 
   // 첫 번째 스윙인지 두 번째 스윙인지 확인
   const isFirstSwing = currentStep === 'swing-first'
@@ -41,16 +53,21 @@ function SwingPage() {
   const setSwingProgress = isFirstSwing ? setFirstSwingProgress : setSecondSwingProgress
 
   useEffect(() => {
+    console.log('[swing] 첫번째 useEffect, currentStep:', currentStep, 'phase:', phase)
+
     // loading phase일 때는 상태 변경을 무시 (solution으로 navigate 중)
     if (phase === 'loading') {
+      console.log('[swing] phase === loading, 조기 return')
       return
     }
 
     // 첫 번째 스윙이 아닌 상태로 진입하면 홈으로 리다이렉트
     if (currentStep !== 'swing-first' && currentStep !== 'swing-second') {
+      console.log('[swing] 조건 불만족! 홈으로 이동. currentStep:', currentStep)
       navigate('/')
       return
     }
+    console.log('[swing] 조건 만족! 계속 진행.')
 
     // Phase 1: 초기 안내 (2초 후 스윙 시작)
     const initialTimer = setTimeout(() => {
