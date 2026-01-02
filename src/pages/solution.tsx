@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSessionStore, selectCurrentStep } from '@/features/golf-session/model/sessionStore'
 import { VideoContentModal } from '@/features/golf-session/ui/VideoContentModal'
 import { Swiper, SwiperSlide } from 'swiper/react'
-import { Navigation, Pagination } from 'swiper/modules'
+import { FreeMode } from 'swiper/modules'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 // 임시 문제점 데이터 (1~3개)
@@ -109,7 +109,6 @@ function SolutionPage() {
   const navigate = useNavigate()
   const currentStep = useSessionStore(selectCurrentStep)
   const { setStep, setSecondSwingProgress } = useSessionStore()
-  const [selectedProblemIndex, setSelectedProblemIndex] = useState(0)
   const [selectedVideo, setSelectedVideo] = useState<typeof MOCK_VIDEOS[0] | null>(null)
 
   useEffect(() => {
@@ -150,13 +149,11 @@ function SolutionPage() {
 
   // 영상형 렌더링
   if (isVideoType) {
-    const currentProblem = MOCK_PROBLEMS[selectedProblemIndex]
-
     return (
       <>
         <div className="min-h-screen flex flex-col py-8 px-4 overflow-auto">
           {/* 상단: 개선 결과 요약 */}
-          <div className="mb-6 text-center animate-fade-in">
+          <div className="mb-8 text-center animate-fade-in mx-auto w-4/5">
             <p className="text-lg md:text-xl text-gray-400 mb-2">
               GTS-AI SOLUTION이 함께 개선하면 예상되는 결과
             </p>
@@ -165,64 +162,57 @@ function SolutionPage() {
             </h1>
           </div>
 
-          {/* 상단: 문제점 영역 */}
-          <div className="bg-slate-800/50 rounded-3xl p-6 mb-6 border border-slate-700">
-            {/* 문제점 탭 */}
-            <div className="flex gap-2 mb-6 justify-center flex-wrap">
+          {/* 상단: 문제점 영역 - 카드 구조 */}
+          <div className="mb-12 mx-auto w-5/6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {MOCK_PROBLEMS.map((problem, index) => (
-                <button
-                  key={problem.id}
-                  onClick={() => setSelectedProblemIndex(index)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${
-                    selectedProblemIndex === index
-                      ? 'bg-green-500 text-white shadow-lg shadow-green-500/50'
-                      : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-                  }`}>
-                  {index === 0 ? '첫번째' : index === 1 ? '두번째' : '세번째'} 문제점
-                </button>
-              ))}
-            </div>
-
-            {/* 현재 문제점 타이틀 */}
-            <h2 className="text-xl md:text-2xl font-bold text-green-400 mb-4 text-center">
-              {currentProblem.title}
-            </h2>
-
-            {/* 샷 캡처 이미지 3개 */}
-            <div className="grid grid-cols-3 gap-4">
-              {currentProblem.shots.map((shot) => (
                 <div
-                  key={shot.id}
-                  className="aspect-video bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-600 flex items-center justify-center">
-                  {shot.image ? (
-                    <img src={shot.image} alt={shot.label} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-center">
-                      <div className="text-4xl mb-2">📸</div>
-                      <p className="text-gray-500 text-sm">{shot.label}</p>
-                    </div>
-                  )}
+                  key={problem.id}
+                  className={`rounded-3xl overflow-hidden border-2 p-5 transition-all duration-300 ${
+                    index === 0
+                      ? 'bg-gradient-to-br from-green-500/20 to-green-400/10 border-green-400 shadow-lg shadow-green-500/30'
+                      : 'bg-slate-800/50 border-slate-700'
+                  }`}>
+                  {/* 문제점 제목 */}
+                  <h3 className={`text-lg font-bold mb-4 ${
+                    index === 0
+                      ? 'text-green-400'
+                      : 'text-gray-200'
+                  }`}>
+                    {problem.title}
+                  </h3>
+
+                  {/* 문제점 이미지 1개 (직사각형 비율 - 세로가 길게) */}
+                  <div className="w-full aspect-[3/4] bg-slate-900 rounded-lg overflow-hidden border border-slate-600 flex items-center justify-center">
+                    {problem.shots[0]?.image ? (
+                      <img src={problem.shots[0].image} alt={problem.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center flex flex-col items-center justify-center">
+                        <div className="text-4xl mb-2">📸</div>
+                        <p className="text-gray-500 text-sm">{problem.title}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* 하단: 맞춤 솔루션 영상 */}
-          <div className="flex-1">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4 text-center">
+          <div className="flex-1 w-full mb-8">
+            <h2 className="text-lg md:text-xl font-bold text-gray-100 mb-4 text-center">
               회원님을 위한 맞춤 솔루션 [ 백스윙 편 ]
             </h2>
 
             {/* Swiper 슬라이더 */}
             <Swiper
-              modules={[Navigation, Pagination]}
-              spaceBetween={20}
-              slidesPerView={1.2}
-              navigation
-              pagination={{ clickable: true }}
+              modules={[FreeMode]}
+              spaceBetween={16}
+              slidesPerView={4.2}
+              freeMode={true}
               breakpoints={{
-                640: { slidesPerView: 2.2 },
-                1024: { slidesPerView: 3.2 },
+                640: { slidesPerView: 4.2 },
+                1024: { slidesPerView: 4.2 },
                 1280: { slidesPerView: 4.2 },
               }}
               className="pb-12">
@@ -230,7 +220,7 @@ function SolutionPage() {
                 <SwiperSlide key={video.id}>
                   <button
                     onClick={() => setSelectedVideo(video)}
-                    className="group relative aspect-[9/16] bg-slate-800 rounded-2xl overflow-hidden border-2 border-slate-700 hover:border-green-400 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/30 w-full">
+                    className="group relative aspect-[9/16] bg-slate-800 rounded-2xl overflow-hidden border-2 border-slate-700 transition-all w-full">
                     {/* 썸네일 */}
                     {video.thumbnail ? (
                       <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
@@ -242,19 +232,6 @@ function SolutionPage() {
                         </div>
                       </div>
                     )}
-
-                    {/* O/X 표시 */}
-                    <div className="absolute top-4 right-4">
-                      {video.status === 'correct' ? (
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-xl">
-                          <span className="text-white text-2xl font-bold">○</span>
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-xl">
-                          <span className="text-white text-2xl font-bold">✕</span>
-                        </div>
-                      )}
-                    </div>
 
                     {/* 재생 버튼 오버레이 */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -276,7 +253,7 @@ function SolutionPage() {
           </div>
 
           {/* 하단: 다시 스윙하러가기 버튼 */}
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center mx-auto">
             <button
               onClick={handleGoToSwing}
               className="px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
@@ -313,24 +290,11 @@ function SolutionPage() {
           /* Swiper 커스텀 스타일 */
           .swiper-button-next,
           .swiper-button-prev {
-            color: #10b981;
-            background: rgba(30, 41, 59, 0.8);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            display: none !important;
           }
 
-          .swiper-button-next::after,
-          .swiper-button-prev::after {
-            font-size: 20px;
-          }
-
-          .swiper-pagination-bullet {
-            background: #10b981;
-          }
-
-          .swiper-pagination-bullet-active {
-            background: #10b981;
+          .swiper-pagination {
+            display: none !important;
           }
         `}</style>
       </>
