@@ -13,7 +13,7 @@ import { useSessionStore, selectCurrentStep } from '@/features/golf-session/mode
 import { VideoContentModal } from '@/features/golf-session/ui/VideoContentModal'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { FreeMode } from 'swiper/modules'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 
 // 임시 문제점 데이터 (1~3개)
 const MOCK_PROBLEMS = [
@@ -59,51 +59,48 @@ const MOCK_VIDEOS = [
   { id: '6', title: '백스윙 교정 영상 6', thumbnail: '', videoUrl: '', status: 'correct' },
 ]
 
-// 임시 비교 데이터 (첫 번째 스윙 vs 두 번째 스윙)
-const MOCK_COMPARISON_DATA = [
-  {
-    metric: '클럽 스피드',
-    unit: 'mph',
-    첫번째: 95.2,
-    두번째: 102.8,
-    improvement: '+8.0%',
-  },
-  {
-    metric: '볼 스피드',
-    unit: 'mph',
-    첫번째: 138.5,
-    두번째: 152.3,
-    improvement: '+10.0%',
-  },
-  {
-    metric: '발사각',
-    unit: '°',
-    첫번째: 12.3,
-    두번째: 14.7,
-    improvement: '+19.5%',
-  },
-  {
-    metric: '스매시 팩터',
-    unit: '',
-    첫번째: 1.45,
-    두번째: 1.48,
-    improvement: '+2.1%',
-  },
-  {
-    metric: '비거리',
-    unit: 'yard',
-    첫번째: 215,
-    두번째: 264,
-    improvement: '+22.8%',
-  },
-  {
-    metric: '정확도',
-    unit: '%',
-    첫번째: 68.2,
-    두번째: 79.1,
-    improvement: '+16.0%',
-  },
+// 임시 비거리 추이 데이터 (첫 번째 vs 두 번째 스윙) - 미터 단위
+const DISTANCE_TREND_DATA = [
+  { shot: '1회차', firstSwing: 210, secondSwing: 220 },
+  { shot: '2회차', firstSwing: 205, secondSwing: 232 },
+  { shot: '3회차', firstSwing: 215, secondSwing: 240 },
+  { shot: '4회차', firstSwing: 210, secondSwing: 245 },
+  { shot: '5회차', firstSwing: 218, secondSwing: 238 },
+  { shot: '6회차', firstSwing: 208, secondSwing: 250 },
+  { shot: '7회차', firstSwing: 212, secondSwing: 244 },
+  { shot: '8회차', firstSwing: 207, secondSwing: 242 },
+  { shot: '9회차', firstSwing: 216, secondSwing: 255 },
+  { shot: '10회차', firstSwing: 210, secondSwing: 260 },
 ]
+
+// 임시 구질 추이 데이터 (첫 번째 스윙 - 목표거리 vs 실제거리)
+const FIRST_SWING_QUALITY_DATA = [
+  { swing: 1, targetDistance: 200, actualDistance: 195, lateralOffset: -3 },
+  { swing: 2, targetDistance: 200, actualDistance: 205, lateralOffset: 2 },
+  { swing: 3, targetDistance: 210, actualDistance: 215, lateralOffset: 5 },
+  { swing: 4, targetDistance: 210, actualDistance: 210, lateralOffset: -1 },
+  { swing: 5, targetDistance: 220, actualDistance: 218, lateralOffset: 4 },
+  { swing: 6, targetDistance: 200, actualDistance: 208, lateralOffset: -2 },
+  { swing: 7, targetDistance: 210, actualDistance: 212, lateralOffset: 3 },
+  { swing: 8, targetDistance: 200, actualDistance: 207, lateralOffset: 1 },
+  { swing: 9, targetDistance: 220, actualDistance: 216, lateralOffset: 6 },
+  { swing: 10, targetDistance: 210, actualDistance: 210, lateralOffset: -4 },
+]
+
+// 임시 구질 추이 데이터 (두 번째 스윙 - 목표거리 vs 실제거리)
+const SECOND_SWING_QUALITY_DATA = [
+  { swing: 1, targetDistance: 200, actualDistance: 220, lateralOffset: 1 },
+  { swing: 2, targetDistance: 200, actualDistance: 232, lateralOffset: -1 },
+  { swing: 3, targetDistance: 210, actualDistance: 240, lateralOffset: 2 },
+  { swing: 4, targetDistance: 210, actualDistance: 245, lateralOffset: 0 },
+  { swing: 5, targetDistance: 220, actualDistance: 238, lateralOffset: -3 },
+  { swing: 6, targetDistance: 200, actualDistance: 250, lateralOffset: 1 },
+  { swing: 7, targetDistance: 210, actualDistance: 244, lateralOffset: 2 },
+  { swing: 8, targetDistance: 200, actualDistance: 242, lateralOffset: -2 },
+  { swing: 9, targetDistance: 220, actualDistance: 255, lateralOffset: 1 },
+  { swing: 10, targetDistance: 210, actualDistance: 260, lateralOffset: 0 },
+]
+
 
 function SolutionPage() {
   const navigate = useNavigate()
@@ -113,12 +110,14 @@ function SolutionPage() {
 
   useEffect(() => {
     // swing 단계에서 넘어오는 경우를 허용하기 위해 조건 변경
+    console.log('[solution] 첫 번째 useEffect, currentStep:', currentStep)
     if (
       currentStep !== 'solution-video' &&
       currentStep !== 'solution-chart' &&
       currentStep !== 'swing-first' &&
       currentStep !== 'swing-second'
     ) {
+      console.log('[solution] 조건 불만족! 홈으로. currentStep:', currentStep)
       navigate('/')
     }
   }, [currentStep, navigate])
@@ -127,9 +126,8 @@ function SolutionPage() {
   useEffect(() => {
     if (currentStep === 'swing-first') {
       setStep('solution-video')
-    } else if (currentStep === 'swing-second') {
-      setStep('solution-chart')
     }
+    // swing-second는 swing 페이지에서 직접 처리하므로 여기서는 변환하지 않음
   }, [currentStep, setStep])
 
   const isVideoType = currentStep === 'solution-video'
@@ -303,9 +301,9 @@ function SolutionPage() {
 
   // 차트형 렌더링
   return (
-    <div className="min-h-screen flex flex-col py-8 px-4 overflow-auto">
+    <div className="min-h-screen w-4/5 flex flex-col py-8 px-4 overflow-auto">
       {/* 상단: 개선 결과 요약 */}
-      <div className="mb-8 text-center animate-fade-in">
+      <div className="mb-16 text-center animate-fade-in">
         <p className="text-lg md:text-xl text-gray-400 mb-2">
           두 번째 스윙 완료! 첫 번째 스윙과 비교한 결과입니다
         </p>
@@ -315,69 +313,213 @@ function SolutionPage() {
       </div>
 
       {/* 중앙: 비교 차트 */}
-      <div className="flex-1 max-w-6xl mx-auto w-full">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-6 text-center">
-          스윙 측정값 비교 분석
-        </h2>
-
-        {/* 차트 영역 */}
-        <div className="bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-slate-700 mb-6">
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
-              data={MOCK_COMPARISON_DATA}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-              <XAxis
-                dataKey="metric"
-                stroke="#94a3b8"
-                style={{ fontSize: '14px', fontWeight: 'bold' }}
-              />
-              <YAxis stroke="#94a3b8" style={{ fontSize: '14px' }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #475569',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-                labelStyle={{ color: '#10b981', fontWeight: 'bold' }}
-              />
-              <Legend
-                wrapperStyle={{ paddingTop: '20px' }}
-                iconType="circle"
-              />
-              <Bar dataKey="첫번째" fill="#ef4444" name="첫 번째 스윙" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="두번째" fill="#10b981" name="두 번째 스윙" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* 개선율 카드 그리드 */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          {MOCK_COMPARISON_DATA.map((data) => (
-            <div
-              key={data.metric}
-              className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 hover:border-green-400 transition-all hover:scale-105">
-              <p className="text-gray-400 text-sm mb-2">{data.metric}</p>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-2xl font-bold text-red-400">
-                  {data.첫번째}{data.unit}
-                </span>
-                <span className="text-gray-500">→</span>
-                <span className="text-2xl font-bold text-green-400">
-                  {data.두번째}{data.unit}
-                </span>
+      <div className="flex-1 mx-auto w-full space-y-12">
+        {/* 1. 비거리 추이 차트 */}
+        <div className='w-full'>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-100">
+              비거리 추이
+            </h2>
+            <div className="flex gap-3 flex-wrap">
+              <div className="bg-slate-800/70 rounded-xl px-3 py-2 border border-purple-400/30">
+                <p className="text-xs text-gray-400">첫 번째 평균</p>
+                <p className="text-base font-bold text-purple-400">213m</p>
               </div>
-              <div className="inline-block px-3 py-1 bg-green-500/20 rounded-full">
-                <span className="text-green-400 font-bold text-sm">{data.improvement}</span>
+              <div className="bg-slate-800/70 rounded-xl px-3 py-2 border border-cyan-400/30">
+                <p className="text-xs text-gray-400">두 번째 평균</p>
+                <p className="text-base font-bold text-cyan-400">244m</p>
+              </div>
+              <div className="bg-slate-800/70 rounded-xl px-3 py-2 border border-green-400/30">
+                <p className="text-xs text-gray-400">개선도</p>
+                <p className="text-base font-bold text-green-400">+14.6%</p>
               </div>
             </div>
-          ))}
+          </div>
+          <div className="bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-slate-700">
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart
+                data={DISTANCE_TREND_DATA}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                <XAxis
+                  dataKey="shot"
+                  stroke="#94a3b8"
+                  style={{ fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  label={{ value: '거리 (m)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                  style={{ fontSize: '14px' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #475569',
+                    borderRadius: '8px',
+                    color: '#fff',
+                  }}
+                  formatter={(value) => `${value}m`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="firstSwing"
+                  stroke="#a855f7"
+                  strokeDasharray="5 5"
+                  name="첫 번째 스윙 (BEFORE)"
+                  dot={{ fill: '#a855f7', r: 5 }}
+                  activeDot={{ r: 7 }}
+                  isAnimationActive={false}
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="secondSwing"
+                  stroke="#06b6d4"
+                  strokeDasharray="5 5"
+                  name="두 번째 스윙 (AFTER)"
+                  dot={{ fill: '#06b6d4', r: 5 }}
+                  activeDot={{ r: 7 }}
+                  isAnimationActive={false}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
+
+        {/* 2. 구질 추이 차트 - 두 개의 차트 (좌우 나뉨) */}
+        <div className='w-full'>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-100">
+              구질 추이
+            </h2>
+            <div className="bg-slate-800/70 rounded-xl px-4 py-3 border border-green-400/30">
+              <p className="text-xs text-gray-400 mb-1">스트레이트 구질 개선</p>
+              <p className="text-lg font-bold text-green-400">+25.3%</p>
+              <p className="text-xs text-gray-400 mt-1">첫번째: 30% → 두번째: 55%</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 왼쪽: 첫 번째 스윙 */}
+            <div className="bg-slate-800/50 rounded-3xl p-6 border border-slate-700">
+              <h3 className="text-lg font-bold text-purple-400 mb-4 text-center">
+                첫 번째 스윙 (BEFORE)
+              </h3>
+              <ResponsiveContainer width="100%" height={350}>
+                <ScatterChart
+                  margin={{ top: 20, right: 20, left: 20, bottom: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" vertical={false} />
+                  <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
+                  <XAxis
+                    type="number"
+                    dataKey="lateralOffset"
+                    stroke="#94a3b8"
+                    domain={[-6, 6]}
+                    tick={false}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="actualDistance"
+                    stroke="#94a3b8"
+                    label={{ value: '거리 (m)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                    style={{ fontSize: '12px', fontWeight: 'bold' }}
+                    domain={[190, 230]}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #475569',
+                      borderRadius: '8px',
+                      color: '#fff',
+                    }}
+                    cursor={{ fill: 'rgba(168, 85, 247, 0.2)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload[0]) {
+                        const data = payload[0].payload as { swing: number; targetDistance: number; actualDistance: number; lateralOffset: number }
+                        const direction = data.lateralOffset < 0 ? 'LEFT' : data.lateralOffset > 0 ? 'RIGHT' : 'CENTER'
+                        return (
+                          <div className="bg-slate-900 p-3 rounded border border-slate-600">
+                            <p className="text-gray-300 text-sm">스윙 {data.swing}회</p>
+                            <p className="text-purple-400 text-sm">거리: {data.actualDistance}m</p>
+                            <p className="text-purple-300 text-sm">방향: {direction} {Math.abs(data.lateralOffset)}m</p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Scatter
+                    data={FIRST_SWING_QUALITY_DATA}
+                    fill="#a855f7"
+                    fillOpacity={0.7}
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* 오른쪽: 두 번째 스윙 */}
+            <div className="bg-slate-800/50 rounded-3xl p-6 border border-slate-700">
+              <h3 className="text-lg font-bold text-cyan-400 mb-4 text-center">
+                두 번째 스윙 (AFTER)
+              </h3>
+              <ResponsiveContainer width="100%" height={350}>
+                <ScatterChart
+                  margin={{ top: 20, right: 20, left: 20, bottom: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" vertical={false} />
+                  <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
+                  <XAxis
+                    type="number"
+                    dataKey="lateralOffset"
+                    stroke="#94a3b8"
+                    domain={[-6, 6]}
+                    tick={false}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="actualDistance"
+                    stroke="#94a3b8"
+                    label={{ value: '거리 (m)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                    style={{ fontSize: '12px', fontWeight: 'bold' }}
+                    domain={[190, 230]}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #475569',
+                      borderRadius: '8px',
+                      color: '#fff',
+                    }}
+                    cursor={{ fill: 'rgba(6, 182, 212, 0.2)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload[0]) {
+                        const data = payload[0].payload as { swing: number; targetDistance: number; actualDistance: number; lateralOffset: number }
+                        const direction = data.lateralOffset < 0 ? 'LEFT' : data.lateralOffset > 0 ? 'RIGHT' : 'CENTER'
+                        return (
+                          <div className="bg-slate-900 p-3 rounded border border-slate-600">
+                            <p className="text-gray-300 text-sm">스윙 {data.swing}회</p>
+                            <p className="text-cyan-400 text-sm">거리: {data.actualDistance}m</p>
+                            <p className="text-cyan-300 text-sm">방향: {direction} {Math.abs(data.lateralOffset)}m</p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Scatter
+                    data={SECOND_SWING_QUALITY_DATA}
+                    fill="#06b6d4"
+                    fillOpacity={0.7}
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* 하단: 완료 버튼 */}
-      <div className="mt-8 flex gap-4 justify-center flex-wrap">
+      <div className="mt-20 flex gap-4 justify-center flex-wrap">
         <button
           onClick={handleComplete}
           className="px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">

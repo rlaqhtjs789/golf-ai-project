@@ -30,7 +30,7 @@ function SwingPage() {
   const currentStep = useSessionStore(selectCurrentStep)
   const firstSwingProgress = useSessionStore(selectFirstSwingProgress)
   const secondSwingProgress = useSessionStore(selectSecondSwingProgress)
-  const { setFirstSwingProgress, setSecondSwingProgress } = useSessionStore()
+  const { setStep, setFirstSwingProgress, setSecondSwingProgress } = useSessionStore()
 
   const [phase, setPhase] = useState<SwingPhase>('initial')
   const [currentMeasurement, setCurrentMeasurement] = useState(generateMockData())
@@ -41,6 +41,11 @@ function SwingPage() {
   const setSwingProgress = isFirstSwing ? setFirstSwingProgress : setSecondSwingProgress
 
   useEffect(() => {
+    // loading phase일 때는 상태 변경을 무시 (solution으로 navigate 중)
+    if (phase === 'loading') {
+      return
+    }
+
     // 첫 번째 스윙이 아닌 상태로 진입하면 홈으로 리다이렉트
     if (currentStep !== 'swing-first' && currentStep !== 'swing-second') {
       navigate('/')
@@ -53,7 +58,7 @@ function SwingPage() {
     }, 2000)
 
     return () => clearTimeout(initialTimer)
-  }, [currentStep, navigate])
+  }, [currentStep, navigate, phase])
 
   useEffect(() => {
     if (phase !== 'swinging') return
@@ -82,12 +87,23 @@ function SwingPage() {
 
     // Phase 3: 로딩 (2초 후 솔루션 페이지로 이동)
     const loadingTimer = setTimeout(() => {
-      // solution 페이지로 이동 (step 변경은 solution 페이지에서 처리)
+      console.log('[swing] 로딩 완료, 상태 설정 시작')
+      // 첫 번째 스윙이면 solution-video, 두 번째 스윙이면 solution-chart로 설정
+      if (isFirstSwing) {
+        console.log('[swing] isFirstSwing 감지, setStep(solution-video) 호출')
+        setStep('solution-video')
+      } else {
+        console.log('[swing] isFirstSwing=false, setStep(solution-chart) 호출')
+        setStep('solution-chart')
+      }
+
+      // solution 페이지로 이동
+      console.log('[swing] navigate(/solution) 호출')
       navigate('/solution')
     }, 2000)
 
     return () => clearTimeout(loadingTimer)
-  }, [phase, navigate])
+  }, [phase, navigate, isFirstSwing, setStep])
 
   // Phase 1: 초기 안내
   if (phase === 'initial') {
