@@ -370,6 +370,7 @@ rm -rf node_modules/.vite
 
 ### 프로젝트 문서
 - **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - 간결한 프로젝트 구조 가이드
+- **[API_SPECIFICATION.md](./API_SPECIFICATION.md)** - 백엔드 API 명세서 ⭐
 - **[CLAUDE.md](./CLAUDE.md)** - 개발 가이드 및 작업 로그
 
 ### 공식 문서

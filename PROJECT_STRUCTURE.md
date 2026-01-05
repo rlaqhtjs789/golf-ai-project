@@ -516,6 +516,7 @@ export const SWING_COUNT_PER_SESSION = 3  // 현재: 3회 (테스트용)
 ## 📚 참고 문서
 
 - **[README.md](./README.md)** - 상세 프로젝트 문서
+- **[API_SPECIFICATION.md](./API_SPECIFICATION.md)** - 백엔드 API 명세서 ⭐
 - **[CLAUDE.md](./CLAUDE.md)** - 개발 가이드 및 작업 로그
 - [Tailwind CSS v4](https://tailwindcss.com)
 - [HeadlessUI](https://headlessui.com)
