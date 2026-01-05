@@ -1,379 +1,153 @@
-# GTSN-AI Project
+# GTSN AI - 프로젝트 구조 가이드
 
-React + Vite + TypeScript + Tailwind CSS 기반 프로젝트
+골프 스윙 분석 AI 키오스크 프로젝트의 간결한 구조 가이드
 
 ## 🚀 기술 스택
 
-- **React 19** - UI 라이브러리
-- **Vite** - 빌드 툴
-- **TypeScript** - 타입 안정성
-- **Tailwind CSS v4** - 유틸리티 CSS 프레임워크
-- **React Router** - 라우팅
-- **vite-plugin-pages** - 파일 기반 자동 라우팅
-- **i18next** - 다국어 지원
-- **HeadlessUI** - 접근성 보장 UI 컴포넌트
+### Core
+- React 19 + TypeScript 5.9
+- Vite 7 (빌드 도구)
+- React Router v7 (라우팅)
+
+### Styling & UI
+- Tailwind CSS v4
+- HeadlessUI (접근성 UI)
+- Heroicons (아이콘)
+
+### Features
+- **Zustand** - 상태 관리 (골프 세션 데이터)
+- **Recharts** - 차트 라이브러리 (비거리/구질 시각화)
+- **Swiper** - 슬라이더 (구질 추이 표시)
+- **i18next** - 다국어 (한/영/일)
 
 ## 📁 프로젝트 구조 (FSD 기반)
 
 ```
 src/
 ├── app/                          # 앱 진입점 및 전역 설정
-│   ├── App.tsx                  # 메인 앱 컴포넌트
+│   ├── App.tsx                  # 메인 앱 (라우팅, 클릭 애니메이션)
+│   ├── config/
+│   │   ├── layouts.ts           # 페이지별 레이아웃 설정
+│   │   └── routes.ts            # 인증 필요 페이지 설정
+│   ├── providers/
+│   │   ├── AuthGuard.tsx        # 인증 가드
+│   │   └── LayoutSwitcher.tsx   # 레이아웃 전환
+│   ├── types/
+│   │   └── route.ts             # 라우트 타입
 │   └── styles/
 │       └── index.css            # Tailwind CSS v4 설정
 │
-├── pages/                        # 📄 페이지 컴포넌트 (자동 라우팅)
-│   ├── index.tsx                # / - 홈페이지
-│   └── about.tsx                # /about - 소개 페이지
+├── pages/                        # 📄 페이지 (자동 라우팅)
+│   ├── index.tsx                # / - 홈
+│   ├── login.tsx                # /login - 로그인
+│   ├── select.tsx               # /select - 정보 입력
+│   ├── swing.tsx                # /swing - 스윙 분석 (10회)
+│   ├── solution.tsx             # /solution - 솔루션 (비디오/차트)
+│   └── complete.tsx             # /complete - 완료
 │
-├── widgets/                      # 🧩 복합 UI 블록 (레이아웃 조합)
+├── widgets/                      # 🧩 복합 UI 블록
 │   └── layout/
-│       └── MainLayout.tsx       # 메인 레이아웃 (Header+Footer 조립)
+│       ├── MainLayout.tsx       # 메인 레이아웃
+│       ├── AuthLayout.tsx       # 인증 레이아웃
+│       └── BlankLayout.tsx      # 빈 레이아웃
 │
-├── features/                     # ⚡ 도메인별 비즈니스 로직 (API 도메인 기준)
-│   │
-│   ├── auth/                    # 인증 도메인 예시
-│   │   ├── api/
-│   │   │   ├── authService.ts   # 로그인, 로그아웃, 회원가입
-│   │   │   └── tokenService.ts  # 토큰 관리, 갱신
-│   │   ├── types/
-│   │   │   ├── authService.type.ts   # authService 관련 모든 타입
-│   │   │   └── tokenService.type.ts  # tokenService 관련 모든 타입
-│   │   ├── constants/
-│   │   │   ├── authErrors.ts    # 에러 코드 enum
-│   │   │   └── authStatus.ts    # 인증 상태 enum
-│   │   ├── ui/
-│   │   │   ├── LoginForm.tsx    # 로그인 전용 폼
-│   │   │   └── SignupForm.tsx
-│   │   ├── hooks/               # 도메인 전용 커스텀 훅 (선택)
-│   │   │   └── useAuth.ts
-│   │   └── utils/               # 도메인 전용 유틸 (선택)
-│   │       └── validateAuth.ts
-│   │
-│   ├── user/                    # 사용자 도메인 예시
-│   │   ├── api/
-│   │   │   └── userService.ts
-│   │   ├── types/
-│   │   │   └── userService.type.ts
-│   │   ├── constants/
-│   │   └── ui/
-│   │
-│   └── product/                 # 상품 도메인 예시
-│       ├── api/
-│       │   ├── productService.ts
-│       │   └── categoryService.ts
+├── features/                     # ⚡ 도메인 비즈니스 로직
+│   └── golf-session/            # 골프 세션 관리
+│       ├── model/
+│       │   └── store.ts         # Zustand 스토어 (스윙 데이터)
 │       ├── types/
-│       │   ├── productService.type.ts
-│       │   └── categoryService.type.ts
-│       ├── constants/
-│       │   └── filterOptions.ts # 필터링 옵션
-│       ├── ui/
-│       │   ├── ProductCard.tsx
-│       │   └── ProductFilter.tsx
-│       └── utils/
-│           └── formatPrice.ts
+│       │   └── index.ts         # 세션 타입
+│       └── ui/
+│           └── VideoContentModal.tsx  # 영상 모달
 │
 └── shared/                       # 🔧 공통 리소스
-    ├── ui/                      # 완전 공용 기본 컴포넌트
-    │   ├── Alert.tsx           # 광역 알림/확인 다이얼로그 (HeadlessUI Dialog)
-    │   ├── AlertContext.tsx    # Alert 전역 상태 관리
-    │   ├── Button.tsx          # 공용 버튼 컴포넌트
-    │   ├── LanguageSelector.tsx # 언어 선택 컴포넌트
+    ├── ui/                      # 공용 컴포넌트
+    │   ├── Alert.tsx           # 광역 알림 다이얼로그
+    │   ├── AlertContext.tsx    # Alert 전역 상태
+    │   ├── Button.tsx          # 버튼
+    │   ├── ContentModal.tsx    # 범용 모달
+    │   ├── LanguageSelector.tsx # 언어 선택
     │   └── index.ts            # 전체 export
     │
     ├── layout/                  # 레이아웃 컴포넌트
-    │   ├── MainHeader.tsx      # 메인 헤더 (홈/나가기 버튼)
+    │   ├── MainHeader.tsx      # 메인 헤더 (홈/나가기/언어)
     │   └── index.ts
     │
     ├── theme/                   # 테마 관리
     │   ├── colors.ts           # 브랜드 색상 가이드
-    │   ├── ThemeContext.tsx    # 테마 Context
-    │   ├── ThemeProvider.tsx   # 테마 Provider
-    │   ├── hooks.ts            # useTheme 훅
+    │   ├── ThemeContext.tsx
+    │   ├── ThemeProvider.tsx
+    │   ├── hooks.ts
     │   └── index.ts
     │
-    ├── i18n/                    # 다국어 지원
-    │   ├── config.ts           # i18n 설정
-    │   ├── hooks.ts            # useTranslation 훅
+    ├── i18n/                    # 다국어
+    │   ├── config.ts
+    │   ├── hooks.ts
     │   ├── index.ts
     │   └── locales/
     │       ├── ko.json         # 한국어
     │       ├── en.json         # 영어
     │       └── ja.json         # 일본어
     │
-    ├── lib/                     # 전역 유틸리티
-    │   ├── utils.ts            # 범용 유틸
-    │   ├── date.ts             # 날짜 관련
-    │   ├── string.ts           # 문자열 관련
-    │   └── validate.ts         # 범용 검증
-    │
-    ├── api/                     # API 공통 설정
-    │   └── client.ts           # axios/fetch 인스턴스
-    │
+    ├── lib/                     # 유틸리티
+    ├── api/                     # API 클라이언트
     ├── types/                   # 전역 타입
-    │   └── common.ts           # 공통 타입
-    │
     └── constants/               # 전역 상수
-        └── config.ts           # 앱 설정
 ```
 
 ## 🎯 FSD (Feature-Sliced Design) 아키텍처
 
 ### 레이어 구조 (상위 → 하위)
 
-1. **app** - 애플리케이션 초기화, 라우팅, 전역 설정
-2. **pages** - URL 경로에 매핑되는 페이지 (자동 라우팅)
-3. **widgets** - 복합 UI 블록 (레이아웃 조합)
-4. **features** - 도메인별 비즈니스 로직 (API 도메인 기준)
-5. **shared** - 프로젝트 전체에서 재사용되는 공통 코드
+1. **app** - 앱 초기화, 라우팅, 전역 설정
+2. **pages** - URL 경로에 매핑되는 페이지
+3. **widgets** - 복합 UI 블록 (레이아웃)
+4. **features** - 도메인별 비즈니스 로직
+5. **shared** - 전체에서 재사용되는 공통 코드
 
 ### 핵심 규칙
 
 - ✅ 상위 레이어는 하위 레이어만 import 가능
-- ❌ 같은 레이어 간 import 금지 (features 간 직접 참조 불가)
-- ✅ `shared`는 모든 레이어에서 자유롭게 사용 가능
+- ❌ 같은 레이어 간 import 금지
+- ✅ `shared`는 모든 레이어에서 사용 가능
 - ❌ 하위 레이어는 상위 레이어 import 불가
 
-### Features 도메인 구조 원칙
-
-**도메인 폴더명 = API 엔드포인트 기준**
-
-```
-features/
-├── auth/          # /api/auth/*
-├── user/          # /api/user/*
-└── product/       # /api/product/*
-```
-
-**각 도메인 내부 구조:**
+### Features 도메인 구조
 
 ```
 features/{domain}/
-├── api/                    # 필수: API 서비스 레이어
-│   ├── xxxService.ts       # 서비스 구현
-│   └── ...
-├── types/                  # 필수: 서비스별 타입 (1:1 매핑)
-│   ├── xxxService.type.ts  # xxxService의 Request/Response 타입
-│   └── ...
-├── constants/              # 선택: enum, 필터 옵션 등
-├── ui/                     # 선택: 도메인 전용 컴포넌트
-├── hooks/                  # 선택: 도메인 전용 커스텀 훅
-└── utils/                  # 선택: 도메인 전용 유틸리티
+├── model/        # 상태 관리 (Zustand, 비즈니스 로직)
+├── types/        # 타입 정의
+├── ui/           # 도메인 전용 컴포넌트
+├── hooks/        # 도메인 전용 훅 (선택)
+└── utils/        # 도메인 전용 유틸 (선택)
 ```
-
-**타입 파일 명명 규칙:**
-- `{서비스명}.type.ts` → 해당 서비스의 모든 Request/Response 타입
-- 예: `authService.ts` → `authService.type.ts`
-- 한 파일에 Request와 Response를 함께 관리
-
-**타입 파일 내부 구조:**
-```typescript
-// features/auth/types/authService.type.ts
-
-// ===== Request Types =====
-export interface LoginRequest {
-  email: string
-  password: string
-}
-
-export interface SignupRequest {
-  email: string
-  password: string
-  name: string
-}
-
-// ===== Response Types =====
-export interface LoginResponse {
-  accessToken: string
-  refreshToken: string
-  user: UserInfo
-}
-
-export interface SignupResponse {
-  message: string
-  userId: string
-}
-
-// ===== Shared Models =====
-export interface UserInfo {
-  id: string
-  email: string
-  name: string
-}
-```
-
-### Import 예시
-
-```tsx
-// ✅ Good - 서비스와 타입을 명확하게 import
-import { authService } from '@/features/auth/api/authService'
-import type { 
-  LoginRequest, 
-  LoginResponse 
-} from '@/features/auth/types/authService.type'
-
-// ✅ Good - shared 사용
-import { Button } from '@/shared/ui'
-import { formatDate } from '@/shared/lib/date'
-
-// ✅ Good - 여러 서비스 사용 시
-import { authService } from '@/features/auth/api/authService'
-import { tokenService } from '@/features/auth/api/tokenService'
-import type { LoginRequest } from '@/features/auth/types/authService.type'
-import type { RefreshTokenRequest } from '@/features/auth/types/tokenService.type'
-
-// ❌ Bad - features 간 직접 참조
-import { userService } from '@/features/user/api/userService' // auth에서 불가!
-
-// ✅ Good - 필요하면 shared로 추출
-import { apiClient } from '@/shared/api/client' // 공통 API 클라이언트
-```
-
-### 실전 사용 예시
-
-```typescript
-// features/auth/api/authService.ts
-import { apiClient } from '@/shared/api/client'
-import type {
-  LoginRequest,
-  LoginResponse,
-  SignupRequest,
-  SignupResponse,
-} from '../types/authService.type'
-
-export const authService = {
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    const response = await apiClient.post('/auth/login', data)
-    return response.data
-  },
-  
-  async signup(data: SignupRequest): Promise<SignupResponse> {
-    const response = await apiClient.post('/auth/signup', data)
-    return response.data
-  },
-}
-```
-
-```typescript
-// pages/login/index.tsx
-import { useState } from 'react'
-import { authService } from '@/features/auth/api/authService'
-import { LoginForm } from '@/features/auth/ui/LoginForm'
-import type { LoginRequest } from '@/features/auth/types/authService.type'
-
-export default function LoginPage() {
-  const handleLogin = async (data: LoginRequest) => {
-    try {
-      const response = await authService.login(data)
-      console.log('로그인 성공:', response)
-    } catch (error) {
-      console.error('로그인 실패:', error)
-    }
-  }
-
-  return <LoginForm onSubmit={handleLogin} />
-}
-```
-
-## 🛠️ 설치 및 실행
-
-### 설치
-\`\`\`bash
-npm install
-\`\`\`
-
-### 개발 서버 실행
-\`\`\`bash
-npm run dev
-\`\`\`
-
-### 빌드
-\`\`\`bash
-npm run build
-\`\`\`
-
-### 프리뷰
-\`\`\`bash
-npm run preview
-\`\`\`
-
-## 🎨 Tailwind CSS 커스터마이징
-
-`tailwind.config.js` 파일에서 다음을 커스터마이징할 수 있습니다:
-
-- **colors** - 브랜드 컬러 추가
-- **screens** - 반응형 브레이크포인트
-- **spacing** - 간격 값
-- **fontFamily** - 폰트 설정
-- **plugins** - Tailwind 플러그인 추가
-
-자세한 내용은 `tailwind.config.js` 주석 참조
-
-## 🗺️ 라우팅 (파일 기반)
-
-`src/pages/` 폴더의 파일 구조가 자동으로 라우트로 변환됩니다:
-
-| 파일 경로 | URL |
-|----------|-----|
-| `pages/index.tsx` | `/` |
-| `pages/about.tsx` | `/about` |
-| `pages/blog/index.tsx` | `/blog` |
-| `pages/blog/[id].tsx` | `/blog/:id` |
-| `pages/[...all].tsx` | `/*` (404) |
 
 ## 📝 코딩 컨벤션
 
 ### 파일명
-- 컴포넌트: `PascalCase.tsx` (예: `LoginForm.tsx`, `UserCard.tsx`)
-- 유틸리티: `camelCase.ts` (예: `formatDate.ts`, `validateEmail.ts`)
-- 페이지: `kebab-case.tsx` (예: `login.tsx`, `user-profile.tsx`)
-- 타입: `camelCase.type.ts` (예: `authService.type.ts`)
+- **컴포넌트**: `PascalCase.tsx`
+  - 예: `VideoContentModal.tsx`, `MainHeader.tsx`
+- **유틸리티**: `camelCase.ts`
+  - 예: `formatDate.ts`
+- **페이지**: `kebab-case.tsx`
+  - 예: `swing.tsx`, `solution.tsx`
+- **타입**: `camelCase.type.ts`
+  - 예: `swingData.type.ts`
+- **Store**: `store.ts`
 
-### 파일 상단 주석 규칙
+### 파일 상단 주석
 
-**페이지 파일 (pages/*.tsx):**
+**페이지:**
 ```tsx
 /**
- * 페이지 역할 설명
+ * 스윙 분석 페이지 (10회 측정)
  *
- * @route /경로
- */
-import ...
-```
-
-**예시:**
-```tsx
-/**
- * 홈 페이지
- *
- * @route /
- */
-
-/**
- * 폼 선택 페이지 (성별, 연령대, 핸디캡, 클럽 선택)
- *
- * @route /select
- */
-
-/**
- * 로그인 페이지
- *
- * @route /login
+ * @route /swing
  */
 ```
 
-**UI 컴포넌트 (shared/ui/*.tsx):**
-```tsx
-/**
- * 컴포넌트 역할 간단 설명
- *
- * 테일윈드/HeadlessUI 컴포넌트 사용 시 참조 링크
- * @see https://링크
- */
-import ...
-```
-
-**예시:**
+**UI 컴포넌트:**
 ```tsx
 /**
  * 광역 알림/확인 다이얼로그 컴포넌트
@@ -381,29 +155,28 @@ import ...
  * HeadlessUI Dialog 기반
  * @see https://headlessui.com/react/dialog
  */
-
-/**
- * 공용 버튼 컴포넌트
- *
- * variant, size 옵션 제공
- */
-
-/**
- * 언어 선택 컴포넌트
- *
- * i18n 다국어 지원
- */
 ```
 
 ### Import 순서
-1. React 관련
-2. 외부 라이브러리
-3. 내부 모듈 (@/)
-4. 상대 경로
-5. 스타일
+```tsx
+// 1. React
+import { useState, useEffect } from 'react'
+
+// 2. 외부 라이브러리
+import { Link } from 'react-router-dom'
+
+// 3. 내부 모듈 (@/)
+import { Button } from '@/shared/ui'
+
+// 4. 상대 경로
+import { Header } from './Header'
+
+// 5. 타입
+import type { SwingData } from '@/features/golf-session/types'
+```
 
 ### 컴포넌트 구조
-\`\`\`tsx
+```tsx
 // 1. Imports
 import { useState } from 'react'
 
@@ -416,74 +189,56 @@ interface Props {
 export function MyComponent({ title }: Props) {
   // 4. Hooks
   const [state, setState] = useState()
-  
+
   // 5. Handlers
   const handleClick = () => {}
-  
+
   // 6. Render
   return <div>{title}</div>
 }
-\`\`\`
-
-## 🔧 Path Alias
-
-TypeScript path alias 설정:
-
-- `@/*` → `src/*`
-
-예시:
-\`\`\`tsx
-import { Button } from '@/shared/ui'
-import { MainLayout } from '@/widgets/layout'
-\`\`\`
+```
 
 ## 🎨 테마 색상 시스템
 
-### 색상 테마 파일 위치
+### 색상 정의 위치
 - **`tailwind.config.js`** - 실제 색상값 정의
-- **`src/shared/theme/colors.ts`** - 사용 가이드 및 참고 문서
+- **`src/shared/theme/colors.ts`** - 사용 가이드
 
-### 사용 방법
+### 브랜드 컬러
 
-**기존 방식 (하드코딩):**
-```tsx
-className="bg-green-500 text-emerald-400"
+```css
+/* Green - 메인 브랜드 */
+--color-brand-primary-400: #4ade80
+--color-brand-primary-500: #22c55e
+--color-brand-primary-600: #16a34a
+
+/* Emerald & Teal - 액센트 */
+--color-brand-accent-emerald: #10b981
+--color-brand-accent-teal: #14b8a6
+
+/* Background - 다크 테마 */
+--color-bg-primary: #0f172a (slate-900)
+--color-bg-secondary: #1e293b (slate-800)
+
+/* Danger - 위험/삭제 */
+--color-danger-500: #ef4444
 ```
 
-**새로운 방식 (테마 사용):**
+### 사용 예시
+
 ```tsx
+// ❌ 하드코딩
+className="bg-green-500 text-emerald-400"
+
+// ✅ 테마 사용
 className="bg-brand-primary-500 text-brand-accent-400"
 ```
 
-### 테마 색상 변경
-나중에 전체 색상 테마를 변경하려면 `tailwind.config.js`에서만 수정하면 됩니다.
-
-```js
-// tailwind.config.js
-colors: {
-  brand: {
-    primary: {
-      400: '#4ade80',  // 여기만 수정하면 전체 앱에 반영
-      500: '#22c55e',
-      600: '#16a34a',
-    },
-    // ...
-  }
-}
-```
-
-### 정의된 색상 그룹
-- **brand.primary** - 메인 브랜드 색상 (green 계열)
-- **brand.accent** - 액센트 색상 (emerald 계열)
-- **brand.teal** - 틸 색상
-- **bg** - 배경 색상 (slate 계열)
-- **danger** - 위험/삭제 색상 (red 계열)
-
-자세한 내용은 `src/shared/theme/colors.ts` 참고
-
 ## 🔔 광역 Alert 시스템
 
-### 사용 방법
+HeadlessUI Dialog 기반 전역 알림/확인 다이얼로그
+
+### 사용법
 
 ```tsx
 import { useAlert } from '@/shared/ui'
@@ -491,67 +246,283 @@ import { useAlert } from '@/shared/ui'
 function MyComponent() {
   const { showAlert, showConfirm } = useAlert()
 
-  // 알림 표시
+  // 알림
   showAlert({
     title: '알림',
     subtitle: '내용',
     okBtnName: '확인',
-    okBtnVariant: 'success',
-    callback: (result) => {
-      // result는 항상 'ok'
-    }
   })
 
-  // 확인 다이얼로그
+  // 확인
   showConfirm({
     title: '확인',
-    subtitle: '정말 삭제하시겠습니까?',
+    subtitle: '삭제하시겠습니까?',
     okBtnName: '삭제',
     cancelBtnName: '취소',
     okBtnVariant: 'danger',
     callback: (result) => {
       if (result === 'ok') {
         // 확인 클릭
-      } else {
-        // 취소 클릭
       }
     }
   })
 }
 ```
 
-### 특징
-- ✅ **전역 사용 가능** - Context API 기반
-- ✅ **HeadlessUI** - 접근성 자동 처리
-- ✅ **버튼 variant** - primary, success, danger
-- ✅ **콜백 지원** - ok/cancel 분기 처리
+### 버튼 Variant
+- `primary` - 기본 (그린)
+- `success` - 성공 (그린)
+- `danger` - 위험 (레드)
 
 ## 🎭 레이아웃 시스템
 
-### 배경 애니메이션
-배경 애니메이션은 **레이아웃 레벨**에서 자동 제공됩니다.
-- `MainLayout` - 메인 페이지 배경
-- `AuthLayout` - 로그인 페이지 배경
+### 레이아웃 종류
+- **main** - 기본 (MainHeader + Content)
+- **auth** - 인증 (Header 없음, 중앙 정렬)
+- **blank** - 빈 레이아웃
 
-페이지 파일에서는 배경 관련 코드를 작성할 필요 없습니다.
+### 레이아웃 설정
 
-### 현재 페이지 목록
-| 파일 | 경로 | 레이아웃 |
-|------|------|---------|
-| `pages/index.tsx` | `/` | MainLayout |
-| `pages/select.tsx` | `/select` | MainLayout |
-| `pages/login.tsx` | `/login` | AuthLayout |
+**파일:** `src/app/config/layouts.ts`
 
-## 📚 추가 리소스
+```typescript
+export const LAYOUT_CONFIG = {
+  '/': {
+    layout: 'main',
+    mainHeader: {
+      showHomeButton: false,
+      showExitButton: false,
+    },
+  },
+  '/swing': {
+    layout: 'main',
+    mainHeader: {
+      showHomeButton: true,
+      showExitButton: true,
+      showLanguageSelector: true,
+    },
+  },
+  '/login': {
+    layout: 'auth',
+  },
+}
+```
 
-- [React 공식 문서](https://react.dev)
-- [Vite 공식 문서](https://vitejs.dev)
-- [Tailwind CSS 공식 문서](https://tailwindcss.com)
-- [HeadlessUI 공식 문서](https://headlessui.com)
-- [FSD 아키텍처](https://feature-sliced.design)
-- [vite-plugin-pages](https://github.com/hannoeru/vite-plugin-pages)
-- [i18next 공식 문서](https://www.i18next.com)
+### MainHeader 옵션
+```typescript
+{
+  mainHeader: {
+    showHomeButton?: boolean        // 홈 버튼 (기본: true)
+    showExitButton?: boolean        // 나가기 버튼 (기본: true)
+    showLanguageSelector?: boolean  // 언어 선택 (기본: true)
+  }
+}
+```
 
-## 📄 License
+## 🌍 다국어 (i18n)
 
-MIT
+### 지원 언어
+- 🇰🇷 한국어 (기본)
+- 🇺🇸 영어
+- 🇯🇵 일본어
+
+### 번역 파일
+```
+src/shared/i18n/locales/
+├── ko.json  # 한국어
+├── en.json  # 영어
+└── ja.json  # 일본어
+```
+
+### 사용법
+
+```tsx
+import { useTranslation } from '@/shared/i18n/hooks'
+
+function MyComponent() {
+  const { t, i18n } = useTranslation()
+
+  return (
+    <div>
+      <h1>{t('common.welcome')}</h1>
+      <button onClick={() => i18n.changeLanguage('en')}>
+        English
+      </button>
+    </div>
+  )
+}
+```
+
+### 번역 추가
+
+```json
+// ko.json
+{
+  "common": {
+    "welcome": "환영합니다"
+  }
+}
+
+// en.json
+{
+  "common": {
+    "welcome": "Welcome"
+  }
+}
+```
+
+## 📊 상태 관리 (Zustand)
+
+### Golf Session Store
+
+**파일:** `features/golf-session/model/store.ts`
+
+```typescript
+// 스윙 데이터 관리
+- 10회 스윙 데이터 저장
+- 세션 정보 (성별, 연령, 핸디캡, 클럽)
+- 분석 결과 보관
+- 반복 스윙 데이터 누적 (최대 5개 유지)
+```
+
+### 사용법
+
+```tsx
+import { useGolfSession } from '@/features/golf-session/model/store'
+
+function MyComponent() {
+  const { swingData, addSwing } = useGolfSession()
+
+  const handleSwing = () => {
+    addSwing({
+      distance: 250,
+      direction: 'straight',
+      // ...
+    })
+  }
+}
+```
+
+## 🎮 클릭 애니메이션
+
+**위치:** `src/app/App.tsx`
+
+전역 클릭 시 게임스러운 애니메이션:
+- 🎯 중심 펄스 효과 (그린/틸 그라디언트)
+- 🌊 다중 동심원 리플 (2개)
+- ✨ 8방향 파티클 버스트
+- 💫 글로우 효과
+
+```tsx
+// App.tsx의 handleClick 함수
+- 클릭 좌표 수집
+- 파티클 생성 (8방향)
+- 0.8초 후 자동 제거
+```
+
+## 🗺️ 라우팅
+
+### 자동 라우팅 (파일 기반)
+
+`src/pages/` 폴더 구조 = URL 경로
+
+| 파일 | URL | 설명 |
+|------|-----|------|
+| `index.tsx` | `/` | 홈 |
+| `login.tsx` | `/login` | 로그인 |
+| `select.tsx` | `/select` | 정보 입력 |
+| `swing.tsx` | `/swing` | 스윙 분석 |
+| `solution.tsx` | `/solution` | 솔루션 |
+| `complete.tsx` | `/complete` | 완료 |
+
+### 페이지 추가
+
+1. `src/pages/` 폴더에 `.tsx` 파일 생성
+2. `kebab-case`로 파일명 작성
+3. `export default` 컴포넌트
+4. 자동 라우트 생성!
+
+## 📦 주요 패키지
+
+| 패키지 | 용도 |
+|--------|------|
+| react ^19.2.0 | UI 라이브러리 |
+| vite ^7.2.4 | 빌드 도구 |
+| typescript ~5.9.3 | 타입 체크 |
+| react-router-dom ^7.10.1 | 라우팅 |
+| tailwindcss ^4.1.17 | CSS |
+| zustand ^5.0.9 | 상태 관리 |
+| recharts ^3.6.0 | 차트 |
+| swiper ^12.0.3 | 슬라이더 |
+| i18next ^25.7.3 | 다국어 |
+| @headlessui/react ^2.2.9 | UI |
+
+## 🛠️ 명령어
+
+```bash
+npm install      # 설치
+npm run dev      # 개발 서버
+npm run build    # 빌드
+npm run preview  # 프리뷰
+npm run lint     # 린트
+```
+
+## ⚙️ 주요 설정값
+
+### 스윙 횟수 설정
+
+**파일:** `src/shared/constants/swing.ts`
+
+```typescript
+export const SWING_COUNT_PER_SESSION = 3  // 현재: 3회 (테스트용)
+```
+
+**변경 방법:**
+1. `src/shared/constants/swing.ts` 파일 열기
+2. 값 수정 (프로덕션: 10회 권장)
+3. 저장 후 자동 재시작
+
+**사용 위치:**
+- `pages/swing.tsx` - 스윙 측정
+- `features/golf-session/model/sessionStore.ts` - 상태 관리
+
+---
+
+## 🎯 사용자 플로우
+
+```
+홈 (/)
+  ↓
+로그인 (/login) [선택]
+  ↓
+정보 입력 (/select)
+  ↓
+┌────────────────────────┐
+│ 스윙 루프 (반복 가능)   │
+│  ↓                     │
+│ 1차 스윙 (/swing)      │
+│  ↓                     │
+│ 솔루션 비디오          │
+│  ↓                     │
+│ 2차 스윙 (/swing)      │
+│  ↓                     │
+│ 솔루션 차트 (비교)     │
+│  ↓ (다시 스윙하기)      │
+│  └────────────────────┘
+  ↓
+완료 (/complete)
+```
+
+## 📚 참고 문서
+
+- **[README.md](./README.md)** - 상세 프로젝트 문서
+- **[CLAUDE.md](./CLAUDE.md)** - 개발 가이드 및 작업 로그
+- [Tailwind CSS v4](https://tailwindcss.com)
+- [HeadlessUI](https://headlessui.com)
+- [Zustand](https://zustand-demo.pmnd.rs)
+- [Recharts](https://recharts.org)
+- [Swiper](https://swiperjs.com/react)
+
+---
+
+**Made with ❤️ by GTSN Team**
