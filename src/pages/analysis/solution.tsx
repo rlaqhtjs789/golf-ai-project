@@ -242,7 +242,7 @@ function SolutionPage() {
     setSecondSwingProgress(0)
     // isTransitioning이 true이므로 아무 UI도 렌더링되지 않음
     Promise.resolve().then(() => {
-      navigate('/swing')
+      navigate('/analysis/swing')
     })
   }
 
@@ -253,7 +253,7 @@ function SolutionPage() {
     setSecondSwingProgress(0)
     setStep('swing-second')
     Promise.resolve().then(() => {
-      navigate('/swing')
+      navigate('/analysis/swing')
     })
   }
 
@@ -266,7 +266,7 @@ function SolutionPage() {
     setSecondSwingProgress(0)
     setStep('swing-first')
     Promise.resolve().then(() => {
-      navigate('/swing')
+      navigate('/analysis/swing')
     })
   }
 
@@ -276,7 +276,7 @@ function SolutionPage() {
     setIsTransitioning(true)
     setStep('complete')
     Promise.resolve().then(() => {
-      navigate('/complete')
+      navigate('/analysis/complete')
     })
   }
 
@@ -310,7 +310,7 @@ function SolutionPage() {
                   key={problem.id}
                   className={`rounded-3xl overflow-hidden border-2 p-5 transition-all duration-300 ${
                     index === 0
-                      ? 'bg-gradient-to-br from-green-500/20 to-green-400/10 border-green-400 shadow-lg shadow-green-500/30'
+                      ? 'bg-linear-to-br from-green-500/20 to-green-400/10 border-green-400 shadow-lg shadow-green-500/30'
                       : 'bg-slate-800/50 border-slate-700'
                   }`}>
                   {/* 문제점 제목 */}
@@ -323,7 +323,7 @@ function SolutionPage() {
                   </h3>
 
                   {/* 문제점 이미지 1개 (직사각형 비율 - 세로가 길게) */}
-                  <div className="w-full aspect-[3/4] bg-slate-900 rounded-lg overflow-hidden border border-slate-600 flex items-center justify-center">
+                  <div className="w-full aspect-3/4 bg-slate-900 rounded-lg overflow-hidden border border-slate-600 flex items-center justify-center">
                     {problem.shots[0]?.image ? (
                       <img src={problem.shots[0].image} alt={problem.title} className="w-full h-full object-cover" />
                     ) : (
@@ -360,12 +360,12 @@ function SolutionPage() {
                 <SwiperSlide key={video.id}>
                   <button
                     onClick={() => setSelectedVideo(video)}
-                    className="group relative aspect-[9/16] bg-slate-800 rounded-2xl overflow-hidden border-2 border-slate-700 transition-all w-full">
+                    className="group relative aspect-9/16 bg-slate-800 rounded-2xl overflow-hidden border-2 border-slate-700 transition-all w-full">
                     {/* 썸네일 */}
                     {video.thumbnail ? (
                       <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
                         <div className="text-center">
                           <div className="text-6xl mb-4">🎥</div>
                           <p className="text-gray-400 text-sm px-4">{video.title}</p>
@@ -383,7 +383,7 @@ function SolutionPage() {
                     </div>
 
                     {/* 제목 */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-linear-to-t from-black/80 to-transparent">
                       <p className="text-white font-semibold text-sm">{video.title}</p>
                     </div>
                   </button>
@@ -396,7 +396,7 @@ function SolutionPage() {
           <div className="mt-8 text-center mx-auto">
             <button
               onClick={handleGoToSwing}
-              className="px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
+              className="px-12 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
               다시 스윙하러가기
             </button>
           </div>
@@ -508,7 +508,7 @@ function SolutionPage() {
                       border-2 transition-all duration-300
                       cursor-pointer hover:scale-105
                       ${isVisible
-                        ? 'bg-gradient-to-r from-green-500/20 to-emerald-600/20 border-green-400 shadow-md shadow-green-500/30'
+                        ? 'bg-linear-to-r from-green-500/20 to-emerald-600/20 border-green-400 shadow-md shadow-green-500/30'
                         : 'bg-slate-800/50 border-slate-600 opacity-50 hover:opacity-70'
                       }
                     `}
@@ -681,19 +681,19 @@ function SolutionPage() {
       <div className="mt-20 flex gap-4 justify-center flex-wrap">
         <button
           onClick={handleNewSwing}
-          className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-blue-500/50">
+          className="px-8 py-4 bg-linear-to-r from-blue-500 to-blue-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-blue-500/50">
           새로운 스윙하기
         </button>
 
         <button
           onClick={handleRetrySwing}
-          className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
+          className="px-8 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
           다시 스윙하기
         </button>
 
         <button
           onClick={handleComplete}
-          className="px-8 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-purple-500/50">
+          className="px-8 py-4 bg-linear-to-r from-purple-500 to-purple-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-purple-500/50">
           완료하기
         </button>
       </div>

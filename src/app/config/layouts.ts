@@ -16,8 +16,13 @@ export const LAYOUT_CONFIG: Record<string, RouteMetadata> = {
     },
   },
 
-  // 선택 화면 (성별, 연령대, 핸디)
-  '/select': {
+  // 로그인 페이지
+  '/auth/login': {
+    layout: 'auth',
+  },
+
+  // 스윙 정보 입력 화면 (성별, 연령대, 핸디)
+  '/analysis/setup': {
     layout: 'main',
     mainHeader: {
       showHomeButton: true,
@@ -26,13 +31,8 @@ export const LAYOUT_CONFIG: Record<string, RouteMetadata> = {
     },
   },
 
-  // 로그인 페이지
-  '/login': {
-    layout: 'auth',
-  },
-
-  // 스윙 페이지
-  '/swing': {
+  // 스윙 분석 페이지
+  '/analysis/swing': {
     layout: 'main',
     mainHeader: {
       showHomeButton: true,
@@ -41,7 +41,7 @@ export const LAYOUT_CONFIG: Record<string, RouteMetadata> = {
   },
 
   // 솔루션 페이지
-  '/solution': {
+  '/analysis/solution': {
     layout: 'main',
     mainHeader: {
       showHomeButton: true,
@@ -50,7 +50,7 @@ export const LAYOUT_CONFIG: Record<string, RouteMetadata> = {
   },
 
   // 완료 페이지 (마지막 페이지)
-  '/complete': {
+  '/analysis/complete': {
     layout: 'main',
     mainHeader: {
       showHomeButton: false,

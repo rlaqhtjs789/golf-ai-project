@@ -158,8 +158,8 @@ function SwingPage() {
       }
 
       // solution 페이지로 이동
-      console.log('[swing] navigate(/solution) 호출')
-      navigate('/solution')
+      console.log('[swing] navigate(/analysis/solution) 호출')
+      navigate('/analysis/solution')
     }, 2000)
 
     return () => clearTimeout(loadingTimer)
@@ -214,7 +214,7 @@ function SwingPage() {
               key={num}
               className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full border-4 transition-all duration-500 ${
                 num <= swingProgress
-                  ? "bg-gradient-to-br from-green-400 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50 scale-110"
+                  ? "bg-linear-to-br from-green-400 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50 scale-110"
                   : "bg-slate-800 border-slate-600"
               }`}>
               {/* 체크 표시 */}

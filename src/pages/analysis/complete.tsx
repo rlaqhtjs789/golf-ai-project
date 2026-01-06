@@ -83,7 +83,7 @@ function CompletePage() {
         {/* 축하 메시지 */}
         <div className="mb-12 animate-fade-in">
           <div className="text-6xl md:text-8xl mb-6">🎉</div>
-          <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-linear-to-r from-green-400 via-emerald-400 to-teal-400 mb-4">
             분석이 완료되었습니다!
           </h1>
           <p className="text-xl md:text-2xl text-gray-300">
@@ -118,7 +118,7 @@ function CompletePage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={handleGoHome}
-            className="px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
+            className="px-12 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
             처음으로
           </button>
 

@@ -15,7 +15,7 @@ function HomePage() {
       <div className="w-full px-6 py-16">
         {/* AI 스윙 진단 섹션 */}
         <div className="text-center mb-24 animate-fade-in">
-          <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 mb-6 drop-shadow-2xl animate-glow">
+          <h2 className="text-6xl font-black text-transparent bg-clip-text bg-linear-to-r from-green-400 via-emerald-400 to-teal-400 mb-6 drop-shadow-2xl animate-glow">
             {t("home.title")}
           </h2>
           <p className="text-2xl text-gray-300 mb-12 font-light tracking-wide">
@@ -24,14 +24,14 @@ function HomePage() {
 
           {/* START 버튼 - 게임 느낌 */}
           <button
-            onClick={() => navigate('/select')}
+            onClick={() => navigate('/analysis/setup')}
             className="group relative px-20 py-6 text-2xl font-bold text-white rounded-2xl overflow-hidden transition-all duration-200 hover:scale-110 shadow-2xl">
             {/* 버튼 배경 그라데이션 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 transition-all duration-200 group-hover:from-green-400 group-hover:via-emerald-400 group-hover:to-green-500"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-green-500 via-emerald-500 to-green-600 transition-all duration-200 group-hover:from-green-400 group-hover:via-emerald-400 group-hover:to-green-500"></div>
 
             {/* 글로우 효과 */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 blur-xl"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-green-400 to-emerald-400 blur-xl"></div>
             </div>
 
             {/* 반짝이는 효과 */}
@@ -47,7 +47,7 @@ function HomePage() {
 
         {/* 스윙 진단과 개선 과정 */}
         <div className="mt-20">
-          <h3 className="text-2xl md:text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-400 mb-12 md:mb-16 tracking-wide">
+          <h3 className="text-2xl md:text-3xl font-bold text-center text-transparent bg-clip-text bg-linear-to-r from-gray-200 to-gray-400 mb-12 md:mb-16 tracking-wide">
             {t("home.processTitle")}
           </h3>
 
@@ -55,7 +55,7 @@ function HomePage() {
           <div className="relative max-w-7xl mx-auto">
             {/* 연결선 - 글로우 효과 (1024px 이상에서만 표시) */}
             <div
-              className="hidden lg:block absolute top-8 left-0 right-0 h-1 bg-gradient-to-r from-green-500/50 via-emerald-500/50 to-green-500/50 shadow-lg shadow-green-500/50"
+              className="hidden lg:block absolute top-8 left-0 right-0 h-1 bg-linear-to-r from-green-500/50 via-emerald-500/50 to-green-500/50 shadow-lg shadow-green-500/50"
               style={{ zIndex: 0 }}></div>
 
             {/* 단계들 - 반응형: 태블릿 3개, 큰 화면 5개 */}
@@ -69,7 +69,7 @@ function HomePage() {
                   <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-60"></div>
 
                   {/* 메인 원 */}
-                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-linear-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full"></div>
                   </div>
                 </div>
@@ -85,7 +85,7 @@ function HomePage() {
               <div className="flex flex-col items-center animate-slide-up delay-100">
                 <div className="relative w-16 h-16 md:w-20 md:h-20 mb-6">
                   <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-60"></div>
-                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-linear-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full"></div>
                   </div>
                 </div>
@@ -101,7 +101,7 @@ function HomePage() {
               <div className="flex flex-col items-center animate-slide-up delay-200">
                 <div className="relative w-16 h-16 md:w-20 md:h-20 mb-6">
                   <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-60"></div>
-                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-linear-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full"></div>
                   </div>
                 </div>
@@ -117,7 +117,7 @@ function HomePage() {
               <div className="flex flex-col items-center animate-slide-up delay-300">
                 <div className="relative w-16 h-16 md:w-20 md:h-20 mb-6">
                   <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-60"></div>
-                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-linear-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full"></div>
                   </div>
                 </div>
@@ -133,7 +133,7 @@ function HomePage() {
               <div className="flex flex-col items-center animate-slide-up delay-400">
                 <div className="relative w-16 h-16 md:w-20 md:h-20 mb-6">
                   <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-60"></div>
-                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 bg-linear-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/60">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full"></div>
                   </div>
                 </div>

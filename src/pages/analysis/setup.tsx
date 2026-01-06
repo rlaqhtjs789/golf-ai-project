@@ -99,7 +99,7 @@ function SelectPage() {
     setFirstSwingProgress(0)
 
     // 스윙 페이지로 이동
-    navigate('/swing')
+    navigate('/analysis/swing')
   }
 
   // 모든 항목이 선택되었는지 확인
@@ -122,7 +122,7 @@ function SelectPage() {
                   <div
                     key={step}
                     className={`h-2 rounded-full transition-all duration-500 ${
-                      step === currentStep ? 'w-16 bg-gradient-to-r from-green-400 to-emerald-500' :
+                      step === currentStep ? 'w-16 bg-linear-to-r from-green-400 to-emerald-500' :
                       step < currentStep ? 'w-8 bg-green-600' : 'w-8 bg-slate-700'
                     }`}
                   />
@@ -135,7 +135,7 @@ function SelectPage() {
                   {selectedGender && (
                     <button
                       onClick={() => transitionToStep(1)}
-                      className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
+                      className="group px-6 py-3 bg-linear-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
                       <span className="text-xl mr-2">{selectedGender === 'male' ? '👨' : '👩'}</span>
                       {t(`select.gender.${selectedGender}`)}
                     </button>
@@ -143,21 +143,21 @@ function SelectPage() {
                   {selectedAge && (
                     <button
                       onClick={() => transitionToStep(2)}
-                      className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
+                      className="group px-6 py-3 bg-linear-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
                       {t(`select.age.ranges.${selectedAge}`)}
                     </button>
                   )}
                   {selectedHandicap && (
                     <button
                       onClick={() => transitionToStep(3)}
-                      className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
+                      className="group px-6 py-3 bg-linear-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
                       {t(`select.handicap.ranges.${selectedHandicap}`)}
                     </button>
                   )}
                   {selectedClub && (
                     <button
                       onClick={() => transitionToStep(4)}
-                      className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
+                      className="group px-6 py-3 bg-linear-to-r from-green-500 to-emerald-600 rounded-full text-white font-semibold shadow-lg hover:shadow-green-500/50 hover:scale-105 transition-all duration-300">
                       {t(`select.club.types.${selectedClub}`)}
                     </button>
                   )}
@@ -174,7 +174,7 @@ function SelectPage() {
           {/* Step 1: 성별 선택 */}
           {currentStep === 1 && (
             <div className="animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 mb-12 md:mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-linear-to-r from-green-400 via-emerald-400 to-teal-400 mb-12 md:mb-16">
                 {t('select.gender.title')}
               </h2>
               <div className="grid grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto">
@@ -183,7 +183,7 @@ function SelectPage() {
                   onClick={() => handleGenderSelect('male')}
                   className={`group relative p-10 md:p-16 rounded-3xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-green-500/30 ${
                     selectedGender === 'male'
-                      ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 shadow-2xl shadow-green-500/50'
+                      ? 'bg-linear-to-br from-green-500 to-emerald-600 border-green-400 shadow-2xl shadow-green-500/50'
                       : 'bg-slate-800/50 hover:bg-slate-700/50 border-slate-700 hover:border-green-500'
                   }`}>
                   <div className="relative z-10">
@@ -201,7 +201,7 @@ function SelectPage() {
                   onClick={() => handleGenderSelect('female')}
                   className={`group relative p-10 md:p-16 rounded-3xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-green-500/30 ${
                     selectedGender === 'female'
-                      ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 shadow-2xl shadow-green-500/50'
+                      ? 'bg-linear-to-br from-green-500 to-emerald-600 border-green-400 shadow-2xl shadow-green-500/50'
                       : 'bg-slate-800/50 hover:bg-slate-700/50 border-slate-700 hover:border-green-500'
                   }`}>
                   <div className="relative z-10">
@@ -220,7 +220,7 @@ function SelectPage() {
           {/* Step 2: 연령대 선택 */}
           {currentStep === 2 && (
             <div className="animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 mb-12 md:mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-linear-to-r from-green-400 via-emerald-400 to-teal-400 mb-12 md:mb-16">
                 {t('select.age.title')}
               </h2>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
@@ -230,8 +230,8 @@ function SelectPage() {
                     onClick={() => handleAgeSelect(age)}
                     className={`relative px-4 py-6 md:py-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/50 group ${
                       selectedAge === age
-                        ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
-                        : 'bg-slate-800/50 hover:bg-gradient-to-br hover:from-green-500 hover:to-emerald-600 border-slate-700 hover:border-green-400'
+                        ? 'bg-linear-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
+                        : 'bg-slate-800/50 hover:bg-linear-to-br hover:from-green-500 hover:to-emerald-600 border-slate-700 hover:border-green-400'
                     }`}>
                     <div className={`text-lg md:text-xl font-bold transition-colors ${
                       selectedAge === age ? 'text-white' : 'text-gray-300 group-hover:text-white'
@@ -247,7 +247,7 @@ function SelectPage() {
           {/* Step 3: 핸디 선택 */}
           {currentStep === 3 && (
             <div className="animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 mb-12 md:mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-linear-to-r from-green-400 via-emerald-400 to-teal-400 mb-12 md:mb-16">
                 {t('select.handicap.title')}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-5 max-w-4xl mx-auto">
@@ -257,8 +257,8 @@ function SelectPage() {
                     onClick={() => handleHandicapSelect(handicap)}
                     className={`relative px-6 py-8 md:py-10 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/50 group ${
                       selectedHandicap === handicap
-                        ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
-                        : 'bg-slate-800/50 hover:bg-gradient-to-br hover:from-green-500 hover:to-emerald-600 border-slate-700 hover:border-green-400'
+                        ? 'bg-linear-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
+                        : 'bg-slate-800/50 hover:bg-linear-to-br hover:from-green-500 hover:to-emerald-600 border-slate-700 hover:border-green-400'
                     }`}>
                     <div className={`text-xl md:text-2xl font-bold transition-colors ${
                       selectedHandicap === handicap ? 'text-white' : 'text-gray-300 group-hover:text-white'
@@ -274,7 +274,7 @@ function SelectPage() {
           {/* Step 4: 클럽 선택 */}
           {currentStep === 4 && (
             <div className="animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 mb-8 md:mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-linear-to-r from-green-400 via-emerald-400 to-teal-400 mb-8 md:mb-12">
                 {t('select.club.title')}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-5 max-w-5xl mx-auto">
@@ -284,8 +284,8 @@ function SelectPage() {
                     onClick={() => handleClubSelect(club)}
                     className={`relative px-6 py-8 md:py-10 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/50 group ${
                       selectedClub === club
-                        ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
-                        : 'bg-slate-800/50 hover:bg-gradient-to-br hover:from-green-500 hover:to-emerald-600 border-slate-700 hover:border-green-400'
+                        ? 'bg-linear-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
+                        : 'bg-slate-800/50 hover:bg-linear-to-br hover:from-green-500 hover:to-emerald-600 border-slate-700 hover:border-green-400'
                     }`}>
                     <div className={`text-xl md:text-2xl font-bold transition-colors ${
                       selectedClub === club ? 'text-white' : 'text-gray-300 group-hover:text-white'
