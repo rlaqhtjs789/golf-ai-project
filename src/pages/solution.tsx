@@ -151,9 +151,10 @@ function SolutionPage() {
   const { setStep, setFirstSwingProgress, setSecondSwingProgress, resetSwingHistory } = useSessionStore()
   const [selectedVideo, setSelectedVideo] = useState<typeof MOCK_VIDEOS[0] | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [toggledSwings, setToggledSwings] = useState<Record<number, boolean>>({})
 
   // 색상 배열 (비거리추이와 동일하게 사용)
-  const colors = ['#a855f7', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+  const colors = ['#c084fc', '#06b6d4', '#10b981', '#f59e0b', '#f472b6']
 
   // 🔗 API 연동 후: 다음 값들을 서버에서 계산하여 받기
   // TODO: GET /api/analysis/summary 응답에서 직접 받기
@@ -208,6 +209,28 @@ function SolutionPage() {
     }
     return 0
   }, [swingHistory])
+
+  // 표시할 스윙 계산 (토글 상태 + 초기값)
+  const visibleSwings = useMemo(() => {
+    const initial: Record<number, boolean> = {}
+    swingHistory.forEach((swing, index) => {
+      // toggledSwings에 있으면 그 값 사용, 없으면 초기값 (첫 번째와 마지막만 true)
+      if (toggledSwings[swing.swingNumber] !== undefined) {
+        initial[swing.swingNumber] = toggledSwings[swing.swingNumber]
+      } else {
+        initial[swing.swingNumber] = index === 0 || index === swingHistory.length - 1
+      }
+    })
+    return initial
+  }, [swingHistory, toggledSwings])
+
+  // 스윙 토글 핸들러
+  const handleToggleSwing = (swingNumber: number) => {
+    setToggledSwings(prev => ({
+      ...prev,
+      [swingNumber]: !(visibleSwings[swingNumber])
+    }))
+  }
 
   // 구질 추이 데이터 메모이제이션
   const ballQualityData = useMemo(() => getBallQualityData(swingHistory), [swingHistory])
@@ -440,38 +463,66 @@ function SolutionPage() {
               비거리 추이 ({swingHistory.length > 0 ? swingHistory[swingHistory.length - 1].swingNumber : 0}회차)
             </h2>
             <div className="flex gap-3 flex-wrap">
-              <div className="bg-slate-800/70 rounded-xl px-4 py-3 border border-purple-400/30">
+              <div className="bg-purple-500/5 rounded-xl px-4 py-3 border border-purple-400/50">
                 <p className="text-xs text-gray-400">첫 번째 평균</p>
                 <p className="text-base font-bold text-purple-400">
                   {firstSwingAverage}m
                 </p>
               </div>
-              <div className="bg-slate-800/70 rounded-xl px-4 py-3 border border-cyan-400/30">
-                <p className="text-xs text-gray-400">마지막 평균</p>
-                <p className="text-base font-bold text-cyan-400">
-                  {lastSwingAverage}m
-                </p>
-              </div>
-              <div className={`bg-slate-800/70 rounded-xl px-4 py-3 border ${improvementRate > 0 ? 'border-green-400/30' : 'border-red-400/30'}`}>
+              {(() => {
+                const lastSwingIndex = Math.max(0, swingHistory.length - 1)
+                const lastSwingColor = colors[lastSwingIndex % colors.length]
+                return (
+                  <div
+                    className="rounded-xl px-4 py-3 border"
+                    style={{
+                      backgroundColor: `${lastSwingColor}11`,
+                      borderColor: `${lastSwingColor}80`
+                    }}>
+                    <p className="text-xs text-gray-400">마지막 평균</p>
+                    <p className="text-base font-bold" style={{ color: lastSwingColor }}>
+                      {lastSwingAverage}m
+                    </p>
+                  </div>
+                )
+              })()}
+              <div className={`rounded-xl px-4 py-3 border ${improvementRate > 0 ? 'bg-green-500/5 border-green-400/50' : 'bg-red-500/5 border-red-400/50'}`}>
                 <p className="text-xs text-gray-400">개선도</p>
                 <p className={`text-base font-bold ${improvementRate > 0 ? 'text-green-400' : 'text-red-400'}`}>{improvementRate > 0 ? '+' : ''}{improvementRate}%</p>
               </div>
             </div>
           </div>
           <div className="bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-slate-700">
-            {/* 범례 */}
-            <div className="flex gap-4 flex-wrap mb-6">
+            {/* 범례 - 인터랙티브 토글 버튼 */}
+            <div className="flex gap-3 flex-wrap mb-6">
               {swingHistory.map((swing, index) => {
-                const chartColors = ['#a855f7', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
-                const color = chartColors[index % chartColors.length]
+                const color = colors[index % colors.length]
+                const isVisible = visibleSwings[swing.swingNumber]
+
                 return (
-                  <div key={`legend-${swing.swingNumber}`} className="flex items-center gap-2">
+                  <button
+                    key={`legend-${swing.swingNumber}`}
+                    onClick={() => handleToggleSwing(swing.swingNumber)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-full
+                      border-2 transition-all duration-300
+                      cursor-pointer hover:scale-105
+                      ${isVisible
+                        ? 'bg-gradient-to-r from-green-500/20 to-emerald-600/20 border-green-400 shadow-md shadow-green-500/30'
+                        : 'bg-slate-800/50 border-slate-600 opacity-50 hover:opacity-70'
+                      }
+                    `}
+                    aria-pressed={isVisible}
+                    aria-label={`${swing.swingNumber}번째 스윙 ${isVisible ? '숨기기' : '보기'}`}
+                  >
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className={`w-3 h-3 rounded-full transition-opacity ${isVisible ? 'opacity-100' : 'opacity-40'}`}
                       style={{ backgroundColor: color }}
                     ></div>
-                    <span className="text-sm text-gray-300">{swing.swingNumber}번째 스윙</span>
-                  </div>
+                    <span className={`text-sm font-semibold transition-colors ${isVisible ? 'text-gray-100' : 'text-gray-500'}`}>
+                      {swing.swingNumber}번째 스윙
+                    </span>
+                  </button>
                 )
               })}
             </div>
@@ -499,24 +550,26 @@ function SolutionPage() {
                   }}
                   formatter={(value) => `${Number(value).toFixed(2)}m`}
                 />
-                {/* 동적으로 각 스윙마다 Line 추가 */}
-                {swingHistory.map((swing, index) => {
-                  const colors = ['#a855f7', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
-                  const color = colors[index % colors.length]
-                  return (
-                    <Line
-                      key={`swing-${swing.swingNumber}`}
-                      type="monotone"
-                      dataKey={`swing${swing.swingNumber}`}
-                      stroke={color}
-                      name={`${swing.swingNumber}번째 스윙`}
-                      dot={{ fill: color, r: 5 }}
-                      activeDot={{ r: 7 }}
-                      isAnimationActive={false}
-                      strokeWidth={2}
-                    />
-                  )
-                })}
+                {/* 동적으로 각 스윙마다 Line 추가 - 가시성 필터링 */}
+                {swingHistory
+                  .filter(swing => visibleSwings[swing.swingNumber])
+                  .map((swing) => {
+                    const originalIndex = swingHistory.indexOf(swing)
+                    const color = colors[originalIndex % colors.length]
+                    return (
+                      <Line
+                        key={`swing-${swing.swingNumber}`}
+                        type="monotone"
+                        dataKey={`swing${swing.swingNumber}`}
+                        stroke={color}
+                        name={`${swing.swingNumber}번째 스윙`}
+                        dot={{ fill: color, r: 5 }}
+                        activeDot={{ r: 7 }}
+                        isAnimationActive={false}
+                        strokeWidth={2}
+                      />
+                    )
+                  })}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -528,7 +581,7 @@ function SolutionPage() {
             <h2 className="text-xl md:text-2xl font-bold text-gray-100">
               구질 추이 ({swingHistory.length > 0 ? swingHistory[swingHistory.length - 1].swingNumber : 0}회차)
             </h2>
-            <div className={`bg-slate-800/70 rounded-xl px-4 py-3 border ${straightQualityImprovement > 0 ? 'border-green-400/30' : 'border-red-400/30'}`}>
+            <div className={`rounded-xl px-4 py-3 border ${straightQualityImprovement > 0 ? 'bg-green-500/5 border-green-400/50' : 'bg-red-500/5 border-red-400/50'}`}>
               <p className="text-xs text-gray-400 mb-1">스트레이트 구질 개선</p>
               <p className={`text-lg font-bold ${straightQualityImprovement > 0 ? 'text-green-400' : 'text-red-400'}`}>{straightQualityImprovement > 0 ? '+' : ''}{Number(straightQualityImprovement.toFixed(2))}%</p>
             </div>
