@@ -6,6 +6,7 @@ import { LayoutSwitcher } from '@/app/providers/LayoutSwitcher'
 import { getLayoutConfig } from '@/app/config/layouts'
 import type { LayoutType } from '@/app/types/route'
 import { AlertProvider } from '@/shared/ui'
+import { EngineConnectionModal } from '@/components/EngineConnectionModal'
 import '@/shared/i18n' // i18n 초기화
 
 interface ClickEffect {
@@ -45,7 +46,10 @@ function App() {
   return (
     <AlertProvider>
       <AuthGuard>
-        <div onClick={handleClick} style={{ cursor: 'default' }}>
+        {/* 엔진 연결 모달 (전역) - Python 서버 연결 상태 자동 모니터링 */}
+        <EngineConnectionModal />
+        
+        <div onClick={handleClick} className="h-screen w-screen overflow-hidden" style={{ cursor: 'default' }}>
           {/* 클릭 이펙트 렌더링 */}
           {clicks.map((click) => (
             <div

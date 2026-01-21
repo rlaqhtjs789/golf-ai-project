@@ -27,6 +27,8 @@ const initialState = {
   secondSwingProgress: 0,
   swingHistory: [],
   swingCount: 1,
+  videoAnalysisResults: [], // 영상 분석 결과
+  sessionUuid: null, // 세션 UUID
 }
 
 /**
@@ -72,7 +74,7 @@ export const useSessionStore = create<SessionState>()(
         ),
 
       /**
-       * 두 번째 스윙 진행률 업데이트 (0~10)
+       * 두 번째 스윙 진행률 업데이트 (0~SWING_COUNT_PER_SESSION)
        */
       setSecondSwingProgress: (progress) =>
         set(
@@ -147,6 +149,28 @@ export const useSessionStore = create<SessionState>()(
         ),
 
       /**
+       * 영상 분석 결과 추가
+       */
+      addVideoAnalysisResult: (result) =>
+        set(
+          (state) => ({ 
+            videoAnalysisResults: [...state.videoAnalysisResults, result] 
+          }),
+          false,
+          'session/addVideoAnalysisResult'
+        ),
+
+      /**
+       * 세션 UUID 설정
+       */
+      setSessionUuid: (uuid) =>
+        set(
+          { sessionUuid: uuid },
+          false,
+          'session/setSessionUuid'
+        ),
+
+      /**
        * 스윙 히스토리만 초기화 (새로운 스윙하기)
        */
       resetSwingHistory: () =>
@@ -193,3 +217,5 @@ export const selectFirstSwingProgress = (state: SessionState) => state.firstSwin
 export const selectSecondSwingProgress = (state: SessionState) => state.secondSwingProgress
 export const selectSwingHistory = (state: SessionState) => state.swingHistory
 export const selectSwingCount = (state: SessionState) => state.swingCount
+export const selectVideoAnalysisResults = (state: SessionState) => state.videoAnalysisResults
+export const selectSessionUuid = (state: SessionState) => state.sessionUuid

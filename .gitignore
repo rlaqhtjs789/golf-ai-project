@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-electron
 *.local
 
 # Editor directories and files
@@ -22,3 +23,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# DLL files (add manually, not tracked in git)
+bin/*.dll
+bin/*.exe
+
+# Electron build artifacts
+out/
+release/

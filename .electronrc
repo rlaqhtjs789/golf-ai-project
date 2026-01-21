@@ -1,0 +1,16 @@
+# Electron 설정 파일
+# 환경 변수 및 런타임 설정
+
+# 개발 모드
+ELECTRON_ENV=development
+
+# 개발자 도구 자동 열기
+ELECTRON_OPEN_DEVTOOLS=true
+
+# 로그 레벨 (error, warn, info, debug)
+ELECTRON_LOG_LEVEL=info
+
+# 하드웨어 가속 비활성화 (문제 발생 시)
+# ELECTRON_DISABLE_GPU=true
+
+

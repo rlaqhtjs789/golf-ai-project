@@ -9,49 +9,15 @@
  */
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSessionStore, selectCurrentStep, selectSwingHistory } from '@/features/golf-session/model/sessionStore'
+import { useSessionStore, selectCurrentStep, selectSwingHistory, selectSessionUuid } from '@/features/golf-session/model/sessionStore'
 import { VideoContentModal } from '@/features/golf-session/ui/VideoContentModal'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { FreeMode } from 'swiper/modules'
 import { LineChart, Line, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import type { SwingData } from '@/features/golf-session/types/session.type'
 import { SWING_COUNT_PER_SESSION } from '@/shared/constants/swing'
-
-// 🔗 API 연동 지점 3: 문제점 데이터 조회
-// TODO: GET /api/analysis/problems 에서 동적으로 로드
-// 현재는 MOCK_PROBLEMS 사용, API 연동 후 제거
-const MOCK_PROBLEMS = [
-  {
-    id: 1,
-    title: '백스윙이 감지되어있어요',
-    percentage: 45.2,
-    shots: [
-      { id: 's1', image: '', label: '샷 1' },
-      { id: 's2', image: '', label: '샷 2' },
-      { id: 's3', image: '', label: '샷 3' },
-    ],
-  },
-  {
-    id: 2,
-    title: '스윙 자세가 감지되어있어요',
-    percentage: 28.7,
-    shots: [
-      { id: 's4', image: '', label: '샷 1' },
-      { id: 's5', image: '', label: '샷 2' },
-      { id: 's6', image: '', label: '샷 3' },
-    ],
-  },
-  {
-    id: 3,
-    title: '임팩트가 감지되어있어요',
-    percentage: 16.3,
-    shots: [
-      { id: 's7', image: '', label: '샷 1' },
-      { id: 's8', image: '', label: '샷 2' },
-      { id: 's9', image: '', label: '샷 3' },
-    ],
-  },
-]
+import { getSeverityInfo, CATEGORY_NAMES, getTopNProblems } from '@/shared/constants/swing-problems'
+import { getSession, type Improvements } from '@/services/aiAnalysisApi'
 
 // 🔗 API 연동 지점 4: 솔루션 영상 데이터 조회
 // TODO: GET /api/analysis/videos/{problemId} 에서 동적으로 로드
@@ -145,13 +111,15 @@ const getBallQualityData = (swingHistory: SwingData[]) => {
 function SolutionPage() {
   const navigate = useNavigate()
   const currentStep = useSessionStore(selectCurrentStep)
-  // 🔗 API 연동 후: 다음 2개 라인 제거하고 API 응답으로 대체
-  // TODO: GET /api/swings/history 에서 swingHistory 받기
   const swingHistory = useSessionStore(selectSwingHistory)
+  const videoAnalysisResults = useSessionStore(state => state.videoAnalysisResults)
+  const sessionUuid = useSessionStore(selectSessionUuid)
   const { setStep, setFirstSwingProgress, setSecondSwingProgress, resetSwingHistory } = useSessionStore()
   const [selectedVideo, setSelectedVideo] = useState<typeof MOCK_VIDEOS[0] | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [toggledSwings, setToggledSwings] = useState<Record<number, boolean>>({})
+  const [improvements, setImprovements] = useState<Improvements | null>(null)
+  const [improvementsLoading, setImprovementsLoading] = useState(false)
 
   // 색상 배열 (비거리추이와 동일하게 사용)
   const colors = ['#c084fc', '#06b6d4', '#10b981', '#f59e0b', '#f472b6']
@@ -174,16 +142,14 @@ function SolutionPage() {
     ? Number((((lastSwingAverage - firstSwingAverage) / firstSwingAverage) * 100).toFixed(2))
     : 0
 
+  // 영상형인지 차트형인지 구분
+  const isVideoType = currentStep === 'solution-video'
+
   useEffect(() => {
     // swing 단계에서 넘어오는 경우를 허용하기 위해 조건 변경
     console.log('[solution] 첫 번째 useEffect, currentStep:', currentStep)
 
-    if (
-      currentStep !== 'solution-video' &&
-      currentStep !== 'solution-chart' &&
-      currentStep !== 'swing-first' &&
-      currentStep !== 'swing-second'
-    ) {
+    if (currentStep !== 'solution-video' && currentStep !== 'solution-chart') {
       console.log('[solution] 조건 불만족! 홈으로. currentStep:', currentStep)
       navigate('/')
       return
@@ -195,6 +161,35 @@ function SolutionPage() {
     // - solution-chart: GET /api/analysis/chart (비교 차트 데이터)
     // 현재는 swingHistory를 로컬에서 사용하고 있으므로 API 연동 후 교체
   }, [currentStep, navigate])
+
+  // API에서 개선 가능 수치 가져오기
+  useEffect(() => {
+    const fetchImprovements = async () => {
+      if (!sessionUuid) {
+        console.log('[solution] sessionUuid 없음 - improvements API 호출 스킵')
+        return
+      }
+
+      setImprovementsLoading(true)
+      try {
+        console.log('[solution] improvements API 호출 시작, sessionUuid:', sessionUuid)
+        const response = await getSession(sessionUuid)
+        
+        if (response.success && response.data.improvements) {
+          console.log('[solution] ✅ improvements 받음:', response.data.improvements)
+          setImprovements(response.data.improvements)
+        } else {
+          console.log('[solution] ⚠️ improvements 없음')
+        }
+      } catch (error) {
+        console.error('[solution] ❌ improvements API 에러:', error)
+      } finally {
+        setImprovementsLoading(false)
+      }
+    }
+
+    fetchImprovements()
+  }, [sessionUuid])
 
   // 🔗 API 연동 후: 서버에서 계산된 값 직접 받기
   // TODO: GET /api/analysis/summary 응답에서 straightQualityImprovement 받기
@@ -235,29 +230,67 @@ function SolutionPage() {
   // 구질 추이 데이터 메모이제이션
   const ballQualityData = useMemo(() => getBallQualityData(swingHistory), [swingHistory])
 
-  // 비디오형: 다시 스윙하러가기 (두 번째 스윙으로)
-  const handleGoToSwing = () => {
-    setIsTransitioning(true)
-    setStep('swing-second')
-    setSecondSwingProgress(0)
-    // isTransitioning이 true이므로 아무 UI도 렌더링되지 않음
-    Promise.resolve().then(() => {
-      navigate('/analysis/swing')
+  // 영상 분석 결과가 있는지 확인
+  const hasVideoAnalysis = videoAnalysisResults && videoAnalysisResults.length > 0
+  
+  // 모든 영상 분석 결과에서 문제점을 추출하고 상위 3개 선택
+  const top3Problems = useMemo(() => {
+    if (!hasVideoAnalysis) return []
+    
+    // 모든 영상(정면/측면)의 문제점을 하나의 배열로 합치기
+    const allProblems: any[] = []
+    videoAnalysisResults.forEach((result) => {
+      const problems = result.result?.value?.problems || []
+      problems.forEach((problem: any) => {
+        allProblems.push({
+          ...problem,
+          videoType: result.videoType, // 어느 영상에서 나온 문제인지 표시
+        })
+      })
     })
-  }
+    
+    // getTopNProblems가 점수순 정렬, koreanName, description, percentage 등을 모두 추가해줌
+    return getTopNProblems(allProblems, 3)
+  }, [hasVideoAnalysis, videoAnalysisResults])
+  
+  // 영상 분석 결과 콘솔 로그
+  useEffect(() => {
+    console.log('=== 솔루션 페이지 디버깅 ===')
+    console.log('videoAnalysisResults:', videoAnalysisResults)
+    console.log('hasVideoAnalysis:', hasVideoAnalysis)
+    console.log('top3Problems:', top3Problems)
+    console.log('top3Problems.length:', top3Problems.length)
+    
+    if (hasVideoAnalysis) {
+      console.log('✅ 영상 분석 결과 있음 - 실제 데이터 사용')
+      videoAnalysisResults.forEach((result, index) => {
+        console.log(`\n[${index + 1}] ${result.videoType} 영상:`)
+        console.log('  - result_code:', result.result?.result_code)
+        console.log('  - problems:', result.result?.value?.problems)
+      })
+      
+      if (top3Problems.length === 0) {
+        console.log('⚠️ 문제점이 추출되지 않음 - 데이터 구조 확인 필요')
+      }
+    } else {
+      console.log('⚠️ 영상 분석 결과 없음 - Mock 데이터 사용')
+    }
+    console.log('============================')
+  }, [hasVideoAnalysis, videoAnalysisResults, top3Problems])
 
-  // 차트형: 다시 스윙 (데이터 유지, swing-second로)
+  // 다시 스윙 (히스토리 유지)
   const handleRetrySwing = () => {
     console.log('[solution-handleRetrySwing] 다시 스윙하기 시작')
     setIsTransitioning(true)
+    setFirstSwingProgress(0)
     setSecondSwingProgress(0)
-    setStep('swing-second')
+    setStep('swing-first')
     Promise.resolve().then(() => {
       navigate('/analysis/swing')
     })
   }
 
-  // 차트형: 새로운 스윙 (히스토리 초기화)
+  // 새로운 스윙 (히스토리 초기화)
   const handleNewSwing = () => {
     console.log('[solution-handleNewSwing] 새로운 스윙하기 시작')
     setIsTransitioning(true)
@@ -270,7 +303,7 @@ function SolutionPage() {
     })
   }
 
-  // 차트형: 완료하기 (complete 페이지로 이동)
+  // 완료하기 (complete 페이지로 이동)
   const handleComplete = () => {
     console.log('[solution-handleComplete] 완료하기 시작')
     setIsTransitioning(true)
@@ -279,8 +312,6 @@ function SolutionPage() {
       navigate('/analysis/complete')
     })
   }
-
-  const isVideoType = currentStep === 'solution-video'
 
   // 전환 중이면 아무것도 렌더링하지 않음
   if (isTransitioning) {
@@ -298,44 +329,157 @@ function SolutionPage() {
               GTS-AI SOLUTION이 함께 개선하면 예상되는 결과
             </p>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-100">
-              회원님은, <span className="text-purple-400">비거리 22.6%</span>, <span className="text-cyan-400">슬라이스 구질 15.8%</span> 개선이 가능해요.
+              {improvementsLoading ? (
+                '개선 가능 수치 분석 중...'
+              ) : improvements?.main_message ? (
+                improvements.main_message.split(',').map((text, index) => (
+                  <span key={index}>
+                    {text.trim()}
+                    {index < improvements.main_message!.split(',').length - 1 && ', '}
+                  </span>
+                ))
+              ) : improvements?.improvements ? (
+                <>
+                  회원님은, 
+                  {improvements.improvements.distance?.improvable && (
+                    <span className="text-purple-400"> 비거리 {improvements.improvements.distance.improvable_percentage?.toFixed(1)}%</span>
+                  )}
+                  {improvements.improvements.ball_flight?.improvable && (
+                    <span className="text-cyan-400">, {improvements.improvements.ball_flight.current} 구질 {improvements.improvements.ball_flight.improvable_percentage?.toFixed(1)}%</span>
+                  )}
+                  {' 개선이 가능해요'}
+                </>
+              ) : (
+                '회원님은, 비거리 22.6%, 슬라이스 구질 15.8% 개선이 가능해요.'
+              )}
             </h1>
           </div>
 
           {/* 상단: 문제점 영역 - 카드 구조 */}
           <div className="mb-12 mx-auto w-5/6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {MOCK_PROBLEMS.map((problem, index) => (
-                <div
-                  key={problem.id}
-                  className={`rounded-3xl overflow-hidden border-2 p-5 transition-all duration-300 ${
-                    index === 0
-                      ? 'bg-linear-to-br from-green-500/20 to-green-400/10 border-green-400 shadow-lg shadow-green-500/30'
-                      : 'bg-slate-800/50 border-slate-700'
-                  }`}>
-                  {/* 문제점 제목 */}
-                  <h3 className={`text-lg font-bold mb-4 ${
-                    index === 0
-                      ? 'text-green-400'
-                      : 'text-gray-200'
-                  }`}>
-                    {problem.title}
-                  </h3>
-
-                  {/* 문제점 이미지 1개 (직사각형 비율 - 세로가 길게) */}
-                  <div className="w-full aspect-3/4 bg-slate-900 rounded-lg overflow-hidden border border-slate-600 flex items-center justify-center">
-                    {problem.shots[0]?.image ? (
-                      <img src={problem.shots[0].image} alt={problem.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="text-center flex flex-col items-center justify-center">
-                        <div className="text-4xl mb-2">📸</div>
-                        <p className="text-gray-500 text-sm">{problem.title}</p>
+            {hasVideoAnalysis ? (
+              top3Problems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {top3Problems.map((problem, index) => {
+                  const severityInfo = getSeverityInfo(problem.severity)
+                  const isHighlighted = index === 0 // 첫 번째(가장 안좋은) 문제 강조
+                  
+                  return (
+                    <div
+                      key={problem.id}
+                      className={`rounded-3xl overflow-hidden border-2 p-5 transition-all duration-300 ${
+                        isHighlighted
+                          ? 'bg-linear-to-br from-green-500/20 to-green-400/10 border-green-400 shadow-lg shadow-green-500/30'
+                          : 'bg-slate-800/50 border-slate-700'
+                      }`}
+                    >
+                      {/* 문제점 이미지 */}
+                      <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden bg-slate-700">
+                        {problem.evidenceImage ? (
+                          // 실제 영상에서 추출한 프레임 사용
+                          <img
+                            src={`data:image/jpeg;base64,${problem.evidenceImage}`}
+                            alt={problem.koreanName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          // 프레임이 없을 경우 대체 UI
+                          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                            <svg className="w-16 h-16 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <p className="text-sm">{problem.koreanName}</p>
+                          </div>
+                        )}
+                        {/* 영상 타입 배지 */}
+                        <div className="absolute top-2 right-2">
+                          <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
+                            {problem.videoType === 'front' ? '📹 정면' : '📹 측면'}
+                          </span>
+                        </div>
+                        {/* 심각도 배지 */}
+                        <div className="absolute top-2 left-2">
+                          <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                            severityInfo.color === 'red' ? 'bg-red-500/80 text-white' :
+                            severityInfo.color === 'yellow' ? 'bg-yellow-500/80 text-black' :
+                            'bg-blue-500/80 text-white'
+                          }`}>
+                            {severityInfo.koreanName}
+                          </span>
+                        </div>
+                        {/* 프레임 번호 표시 */}
+                        {problem.evidenceFrameNumber !== null && problem.evidenceFrameNumber !== undefined && (
+                          <div className="absolute bottom-2 left-2">
+                            <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
+                              🎬 프레임 {problem.evidenceFrameNumber}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      
+                      {/* 문제점 제목 */}
+                      <h3 className={`text-lg font-bold mb-4 ${
+                        isHighlighted ? 'text-green-300' : 'text-gray-200'
+                      }`}>
+                        {problem.koreanName}
+                      </h3>
+                      
+                      {/* 설명 */}
+                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                        {problem.description}
+                      </p>
+                      
+                      {/* 개선 가능 퍼센티지 */}
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs text-gray-500">개선 가능</span>
+                        <span className="text-2xl font-bold text-green-400">
+                          {problem.percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      {/* 카테고리 */}
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="px-2 py-1 bg-slate-700 rounded-full text-gray-300">
+                          🏷️ {CATEGORY_NAMES[problem.category] || problem.category}
+                        </span>
+                        <span className="px-2 py-1 bg-slate-700 rounded-full text-gray-300">
+                          📊 {problem.score?.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              ) : (
+                // 영상 분석 결과는 있지만 문제점이 없을 때
+                <div className="text-center py-12">
+                  <div className="inline-block p-6 bg-green-500/10 rounded-3xl border-2 border-green-500/30">
+                    <svg className="w-20 h-20 mx-auto mb-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 className="text-2xl font-bold text-green-400 mb-2">완벽한 스윙입니다! 🎉</h3>
+                    <p className="text-gray-300">AI가 감지한 문제점이 없습니다.</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              )
+            ) : (
+              // 영상 분석 결과가 없을 때
+              <div className="text-center py-12">
+                <div className="inline-block p-6 bg-orange-500/10 rounded-3xl border-2 border-orange-500/30">
+                  <svg className="w-20 h-20 mx-auto mb-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <h3 className="text-2xl font-bold text-orange-400 mb-2">영상 분석 결과 없음</h3>
+                  <p className="text-gray-300 mb-4">영상 분석이 완료되지 않았거나 데이터를 불러올 수 없습니다.</p>
+                  <button
+                    onClick={handleRetrySwing}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors"
+                  >
+                    다시 스윙하기
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 하단: 맞춤 솔루션 영상 */}
@@ -395,7 +539,7 @@ function SolutionPage() {
           {/* 하단: 다시 스윙하러가기 버튼 */}
           <div className="mt-8 text-center mx-auto">
             <button
-              onClick={handleGoToSwing}
+              onClick={handleRetrySwing}
               className="px-12 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
               다시 스윙하러가기
             </button>

@@ -12,5 +12,5 @@ interface BlankLayoutProps {
  * 랜딩 페이지, 404 페이지 등에 사용
  */
 export function BlankLayout({ children }: BlankLayoutProps) {
-  return <>{children}</>
+  return <div className="h-screen w-screen overflow-hidden">{children}</div>
 }

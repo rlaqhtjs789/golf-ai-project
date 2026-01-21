@@ -1,5 +1,6 @@
 import { HomeIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid'
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { LanguageSelector, useAlert } from '@/shared/ui'
 
 /**
@@ -29,6 +30,29 @@ export function MainHeader({ options }: MainHeaderProps) {
 
   const navigate = useNavigate()
   const { showConfirm } = useAlert()
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  // 시계 업데이트
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  // 시간 포맷 (HH:MM:SS)
+  const formatTime = (date: Date) => {
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    return `${hours}:${minutes}:${seconds}`
+  }
+
+  // 시간 클릭 → 관리자 페이지
+  const handleTimeClick = () => {
+    navigate('/settings/shop')
+  }
 
   const handleHomeClick = () => {
     showConfirm({
@@ -52,28 +76,46 @@ export function MainHeader({ options }: MainHeaderProps) {
       okBtnName: '종료',
       cancelBtnName: '취소',
       okBtnVariant: 'danger',
-      callback: (result) => {
+      callback: async (result) => {
         if (result === 'ok') {
-          // TODO: 앱 종료 API 연동 필요
           console.log('앱 종료 요청')
+          // Electron 앱 종료
+          if (window.app && window.app.quit) {
+            try {
+              await window.app.quit()
+            } catch (error) {
+              console.error('앱 종료 실패:', error)
+            }
+          } else {
+            console.warn('Electron API를 사용할 수 없습니다')
+          }
         }
       },
     })
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-green-500/30 shadow-lg shadow-green-500/20 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-green-500/30 shadow-lg shadow-green-500/20 backdrop-blur-sm" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          {/* 로고 */}
-          <div className="shrink-0">
+          {/* 로고 + 시간 */}
+          <div className="flex items-center gap-6 shrink-0">
             <h1 className="text-2xl font-bold text-white drop-shadow-lg">
               GTS Ai <span className="text-green-400 animate-pulse">SOLUTION</span>
             </h1>
+            
+            {/* 시간 표시 (클릭하면 관리자 페이지) */}
+            <button
+              onClick={handleTimeClick}
+              className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/80 text-gray-300 hover:text-green-400 rounded-lg font-mono text-lg transition-all duration-200 hover:scale-105 border border-slate-700/50 hover:border-green-500/50 cursor-pointer"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              title="관리자 설정">
+              {formatTime(currentTime)}
+            </button>
           </div>
 
           {/* 우측 메뉴 */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             {showLanguageSelector && <LanguageSelector />}
 
             {showHomeButton && (

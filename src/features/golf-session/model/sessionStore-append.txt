@@ -1,0 +1,3 @@
+﻿export const selectSwingHistory = (state: SessionState) => state.swingHistory
+export const selectSwingCount = (state: SessionState) => state.swingCount
+export const selectVideoAnalysisResults = (state: SessionState) => state.videoAnalysisResults

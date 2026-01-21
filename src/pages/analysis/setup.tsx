@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '@/shared/i18n/hooks'
 import { useSessionStore } from '@/features/golf-session/model/sessionStore'
+import { startSession } from '@/services/aiAnalysisApi'
 
 type Gender = 'male' | 'female' | null
 type AgeRange = '15-19' | '20-29' | '30-32' | '33-35' | '36-39' | '40-44' | '45-49' | '60-69' | '70-79' | null
@@ -17,7 +18,7 @@ type Step = 1 | 2 | 3 | 4
 function SelectPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { setStep: setSessionStep, setFirstSwingProgress, reset } = useSessionStore()
+  const { setStep: setSessionStep, setFirstSwingProgress, setSessionUuid, reset } = useSessionStore()
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [selectedGender, setSelectedGender] = useState<Gender>(null)
   const [selectedAge, setSelectedAge] = useState<AgeRange>(null)
@@ -65,31 +66,52 @@ function SelectPage() {
     }
   }
 
-  // 클럽 선택 시 state만 업데이트
-  const handleClubSelect = (club: ClubType) => {
+  // 클럽 타입을 API 형식으로 변환
+  const mapClubType = (club: ClubType): string => {
+    if (club === 'driver') return 'driver'
+    if (club === 'wood3') return '3wood'
+    if (club === 'utility') return '3iron' // utility는 3iron으로 매핑
+    if (club === 'iron4') return '4iron'
+    if (club === 'iron5') return '5iron'
+    if (club === 'iron6') return '6iron'
+    if (club === 'iron7') return '7iron'
+    if (club === 'iron8') return '8iron'
+    if (club === 'iron9') return '9iron'
+    return 'driver' // 기본값
+  }
+
+  // 연령대를 API 형식으로 변환
+  const mapAgeGroup = (age: AgeRange): string => {
+    if (!age) return '30s'
+    // '20-29' -> '20s'
+    const firstNumber = age.split('-')[0]
+    return `${firstNumber}s`
+  }
+
+  // 클럽 선택 시 바로 다음 단계로 이동
+  const handleClubSelect = async (club: ClubType) => {
     setSelectedClub(club)
+    // 클럽 선택 후 바로 스윙 세션으로 이동 (club을 직접 전달)
+    await handleNext(club)
   }
 
   // 다음 페이지로 이동
-  const handleNext = () => {
+  const handleNext = async (clubOverride?: ClubType) => {
+    const finalClub = clubOverride || selectedClub
+    
     // 선택된 값 콘솔 디버깅
     console.log('=== 선택 완료 ===')
     console.log('성별:', selectedGender)
     console.log('연령대:', selectedAge)
     console.log('핸디:', selectedHandicap)
-    console.log('클럽:', selectedClub)
-    console.log('전체 데이터:', { selectedGender, selectedAge, selectedHandicap, selectedClub })
+    console.log('클럽:', finalClub)
+    console.log('전체 데이터:', { selectedGender, selectedAge, selectedHandicap, club: finalClub })
 
-    // 🔗 API 연동 지점: 사용자 정보 저장
-    // TODO: POST /api/user/profile (사용자 정보 저장)
-    // Request body:
-    // {
-    //   gender: selectedGender,
-    //   ageRange: selectedAge,
-    //   handicap: selectedHandicap,
-    //   club: selectedClub
-    // }
-    // 응답: userId 또는 sessionId (향후 스윙 데이터 저장 시 필요)
+    // 모든 항목이 선택되었는지 확인
+    if (!selectedGender || !selectedAge || !selectedHandicap || !finalClub) {
+      console.error('[setup] ⚠️ 필수 항목이 선택되지 않음')
+      return
+    }
 
     // 세션 초기화 (처음부터 다시 시작)
     reset()
@@ -98,8 +120,61 @@ function SelectPage() {
     setSessionStep('swing-first')
     setFirstSwingProgress(0)
 
-    // 스윙 페이지로 이동
+    // 스윙 페이지로 즉시 이동 (API는 백그라운드에서 처리)
+    console.log('[setup] → 스윙 페이지로 이동')
     navigate('/analysis/swing')
+
+    // 🔗 API 연동: 세션 시작 (백그라운드 실행 - 페이지 전환을 막지 않음)
+    const apiClubType = mapClubType(finalClub)
+    const apiAgeGroup = mapAgeGroup(selectedAge)
+    
+    // shop_id와 pcid 확인
+    const { getShopSettings } = await import('@/services/settingsService')
+    const shopSettings = getShopSettings()
+    console.log('[setup] shopSettings:', shopSettings)
+    console.log('[setup] API 전송 데이터:', {
+      club_type: apiClubType,
+      gender: selectedGender,
+      age_group: apiAgeGroup,
+      handicap: selectedHandicap,
+      shop_id: shopSettings.shop_id,
+      pcid: shopSettings.pcid,
+    })
+
+    startSession({
+      club_type: apiClubType,
+      gender: selectedGender as 'male' | 'female',
+      age_group: apiAgeGroup as any,
+      handicap: selectedHandicap ? parseFloat(selectedHandicap) : null,
+      swing_count: 3,
+    }).then(response => {
+      if (response.success && response.data.session_uuid) {
+        console.log('[setup] ✅ 세션 시작 성공, UUID:', response.data.session_uuid)
+        setSessionUuid(response.data.session_uuid)
+        
+        // 🔗 Electron IPC: 센서 수집 시작
+        if (window.swingAnalysis) {
+          window.swingAnalysis.startSession(response.data.session_uuid, 3)
+            .then((ipcResult) => {
+              if (ipcResult.success) {
+                console.log('[setup] ✅ Electron 수집 모드 활성화')
+              } else {
+                console.error('[setup] ⚠️ Electron 수집 모드 활성화 실패:', ipcResult.error)
+              }
+            })
+        } else {
+          console.warn('[setup] ⚠️ window.swingAnalysis 없음 (웹 환경)')
+        }
+      } else {
+        console.error('[setup] ⚠️ 세션 UUID 없음')
+      }
+    }).catch(error => {
+      console.error('[setup] ❌ 세션 시작 실패:', error)
+      console.error('[setup] 에러 상세:', error.message)
+      if (error.message?.includes('422')) {
+        console.error('[setup] ⚠️ 422 에러: 입력값이 올바르지 않습니다. shop_id와 pcid를 확인하세요.')
+      }
+    })
   }
 
   // 모든 항목이 선택되었는지 확인
@@ -306,35 +381,6 @@ function SelectPage() {
             </div>
           </div>
         </div>
-
-        {/* 우측 화살표 버튼 - 모든 선택 완료 시 */}
-        {isAllSelected && (
-          <div className="flex items-center animate-slide-in">
-            <button
-              onClick={handleNext}
-              className="group relative flex items-center gap-1 p-4 md:p-6 hover:scale-110 transition-all duration-300">
-              {/* 화살표 3개 무한 반복 점등 */}
-              <svg
-                className="w-10 h-10 md:w-12 md:h-12 animate-arrow-wave-1"
-                fill="currentColor"
-                viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-              <svg
-                className="w-10 h-10 md:w-12 md:h-12 animate-arrow-wave-2"
-                fill="currentColor"
-                viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-              <svg
-                className="w-10 h-10 md:w-12 md:h-12 animate-arrow-wave-3"
-                fill="currentColor"
-                viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* 애니메이션 CSS */}
@@ -366,34 +412,6 @@ function SelectPage() {
           }
         }
 
-        .animate-slide-in {
-          animation: slide-in 0.6s ease-out;
-        }
-
-        /* 화살표 무한 반복 웨이브 애니메이션 */
-        @keyframes arrow-wave {
-          0%, 100% {
-            opacity: 0.3;
-            color: #6b7280;
-          }
-          50% {
-            opacity: 1;
-            color: #10b981;
-            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
-          }
-        }
-
-        .animate-arrow-wave-1 {
-          animation: arrow-wave 1.5s ease-in-out 0s infinite;
-        }
-
-        .animate-arrow-wave-2 {
-          animation: arrow-wave 1.5s ease-in-out 0.3s infinite;
-        }
-
-        .animate-arrow-wave-3 {
-          animation: arrow-wave 1.5s ease-in-out 0.6s infinite;
-        }
       `}</style>
     </div>
   )

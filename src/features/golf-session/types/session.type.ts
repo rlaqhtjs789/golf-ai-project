@@ -7,9 +7,9 @@
 /**
  * 세션 진행 단계
  *
- * swing-first: 첫 번째 스윙 (스윙화면-1, 2, 3)
- * solution-video: 첫 번째 솔루션 (영상형)
- * swing-second: 두 번째 스윙 (스윙화면두번째-1, 2, 3)
+ * swing-first: 첫 번째 스윙 (3번 샷: 1번째는 영상+샷데이터, 2-3번째는 샷데이터만)
+ * solution-video: 첫 번째 솔루션 (영상 분석 결과 표시)
+ * swing-second: 두 번째 스윙 (3번 샷: 1번째는 영상+샷데이터, 2-3번째는 샷데이터만)
  * solution-chart: 두 번째 솔루션 (차트 비교형)
  * complete: 완료 (마지막 페이지)
  */
@@ -80,6 +80,25 @@ export interface SolutionVideo {
 }
 
 /**
+ * 영상 분석 결과
+ */
+export interface VideoAnalysisResult {
+  videoType: 'front' | 'side'
+  result: {
+    result_code: number
+    value?: {
+      problems?: any[]
+      frameIndex?: Record<string, number>
+      swingPlane?: {
+        swingTempo?: number
+      }
+      [key: string]: any
+    }
+    analysis_result?: any // 하위 호환성을 위해 유지
+  }
+}
+
+/**
  * 솔루션 데이터
  *
  * @property problemType - 주요 문제 유형 (예: "비거리 부족", "슬라이스")
@@ -96,6 +115,7 @@ export interface SolutionData {
     consistency: number
   }
   videos: SolutionVideo[]
+  videoAnalysisResults?: VideoAnalysisResult[] // 영상 분석 결과 추가
 }
 
 /**
@@ -112,17 +132,23 @@ export interface SessionState {
   // 솔루션 데이터
   solutionData: SolutionData | null
 
-  // 첫 번째 스윙 진행 상태 (0~10)
+  // 첫 번째 스윙 진행 상태 (0~SWING_COUNT_PER_SESSION)
   firstSwingProgress: number
 
-  // 두 번째 스윙 진행 상태 (0~10)
+  // 두 번째 스윙 진행 상태 (0~SWING_COUNT_PER_SESSION)
   secondSwingProgress: number
 
   // 스윙 히스토리 (최대 5개 FIFO)
   swingHistory: SwingData[]
 
-  // 현재 스윙 횟수 (1=first, 2=second, 3=repeat1, etc.)
+  // 현재 스윙 횟수 (1=first, 2=second, etc.)
   swingCount: number
+
+  // 영상 분석 결과
+  videoAnalysisResults: VideoAnalysisResult[]
+
+  // 세션 UUID (백엔드 API 연동용)
+  sessionUuid: string | null
 
   // Actions
   setStep: (step: SessionStep) => void
@@ -133,6 +159,8 @@ export interface SessionState {
   saveSolutionData: (data: SolutionData) => void
   addSwingToHistory: (data: SwingData) => void
   setSwingCount: (count: number) => void
+  addVideoAnalysisResult: (result: VideoAnalysisResult) => void
+  setSessionUuid: (uuid: string | null) => void
   resetSwingHistory: () => void
   reset: () => void
 }

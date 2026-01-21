@@ -14,15 +14,15 @@ interface AuthLayoutProps {
  */
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="h-screen min-w-[768px] flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
       {/* 배경 애니메이션 효과 */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
         <div className="absolute w-96 h-96 bg-green-500/10 rounded-full blur-3xl -top-48 -left-48 animate-pulse"></div>
         <div className="absolute w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl -bottom-48 -right-48 animate-pulse delay-1000"></div>
         <div className="absolute w-96 h-96 bg-teal-500/10 rounded-full blur-3xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse delay-500"></div>
       </div>
 
-      <div className="w-full relative z-1">{children}</div>
+      <div className="w-full h-full relative z-1 flex items-center justify-center overflow-hidden">{children}</div>
 
       {/* 애니메이션 CSS */}
       <style>{`

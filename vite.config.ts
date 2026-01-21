@@ -16,4 +16,26 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  // Electron에서 로드할 때 상대 경로 사용 (항상 상대 경로)
+  base: './',
+  // 개발 서버 설정
+  server: {
+    port: 5174,
+    strictPort: true, // 포트가 사용 중이면 에러
+  },
+  // 빌드 설정
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    // Electron 환경에서 사용할 수 있도록 설정
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@headlessui/react', '@heroicons/react'],
+          'chart-vendor': ['recharts'],
+        },
+      },
+    },
+  },
 })
