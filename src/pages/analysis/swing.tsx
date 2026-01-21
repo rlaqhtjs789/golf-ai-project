@@ -102,7 +102,7 @@ function SwingPage() {
     return () => clearTimeout(timer)
   }, [phase])
 
-  // 샷 데이터 및 영상 분석 이벤트 리스너
+  // 샷 데이터 및 영상 분석 이벤트 리스너 + startSession 확인
   useEffect(() => {
     if (!window.swingAnalysis) {
       console.log('[swing] ⚠️ window.swingAnalysis 없음 - Electron 환경이 아님')
@@ -110,9 +110,16 @@ function SwingPage() {
     }
 
     console.log('✅ 스윙 분석 리스너 등록')
-
+    
     // 샷 데이터 수신 이벤트 - 각 샷마다 바로 solution으로 이동
+    // 리스너를 먼저 등록 (이벤트를 놓치지 않도록)
+    console.log('[swing] 📡 Registering onNewShot listener...')
+    console.log('[swing] 📡 window.swingAnalysis.onNewShot exists:', typeof window.swingAnalysis?.onNewShot)
     const unsubNewShot = window.swingAnalysis.onNewShot(async (receivedData: any) => {
+      console.log(`\n${'='.repeat(60)}`)
+      console.log(`[swing] 🎯 onNewShot callback triggered!`)
+      console.log(`[swing] 📦 Received data:`, receivedData)
+      console.log(`${'='.repeat(60)}\n`)
       console.log(`🎯 [${swingCount}번째 샷] 샷 데이터 수신 (전체):`, receivedData)
       
       // 데이터 구조 확인: { sessionUuid, data } 또는 직접 shotData
@@ -279,7 +286,54 @@ function SwingPage() {
       }
     })
 
+    // startSession이 호출되었는지 확인하고, 필요하면 호출
+    const ensureSessionStarted = async () => {
+      try {
+        console.log('[swing] 🔍 Checking session status...')
+        const status = await window.swingAnalysis.getStatus()
+        console.log('[swing] 📊 Session status:', status)
+        console.log('[swing] 📊 Current sessionUuid:', sessionUuid)
+        
+        // 세션이 활성화되지 않았고 sessionUuid가 있으면 startSession 호출
+        if (!status.isActive && sessionUuid) {
+          console.log('[swing] ⚠️ Session not active, starting session...')
+          console.log('[swing] 📡 Calling window.swingAnalysis.startSession...')
+          const result = await window.swingAnalysis.startSession(sessionUuid, SWING_COUNT_PER_SESSION)
+          console.log('[swing] 📡 IPC result:', result)
+          if (result.success) {
+            console.log('[swing] ✅ Session started successfully from swing page')
+          } else {
+            console.error('[swing] ❌ Failed to start session:', result.error)
+          }
+        } else if (status.isActive) {
+          console.log('[swing] ✅ Session already active')
+        } else {
+          console.warn('[swing] ⚠️ Session UUID not available yet, waiting...')
+        }
+      } catch (error) {
+        console.error('[swing] ❌ Error checking/starting session:', error)
+      }
+    }
+    
+    // 세션 시작 확인 (즉시 + sessionUuid 변경 시)
+    let sessionTimer: NodeJS.Timeout | null = null
+    
+    // 즉시 확인 (sessionUuid가 이미 있는 경우)
+    if (sessionUuid) {
+      console.log('[swing] 🚀 sessionUuid available, checking session immediately...')
+      ensureSessionStarted()
+    } else {
+      // sessionUuid가 없으면 잠시 후 다시 확인
+      sessionTimer = setTimeout(() => {
+        console.log('[swing] ⏰ Delayed session check (sessionUuid might be set now)...')
+        ensureSessionStarted()
+      }, 1000)
+    }
+
     return () => {
+      if (sessionTimer) {
+        clearTimeout(sessionTimer)
+      }
       unsubNewShot()
       unsubStart()
       unsubProgress()
@@ -287,7 +341,7 @@ function SwingPage() {
       unsubError()
       unsubVideoResult()
     }
-  }, [swingCount])
+  }, [swingCount, sessionUuid]) // sessionUuid가 변경되면 다시 실행
 
   useEffect(() => {
     console.log('[swing] 첫번째 useEffect, currentStep:', currentStep, 'phase:', phase)
@@ -580,11 +634,4 @@ function SwingPage() {
         }
 
         .animate-scale-in {
-          animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-      `}</style>
-    </div>
-  );
-}
-export default SwingPage
-
+          animation: scale-in 

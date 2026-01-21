@@ -3,6 +3,37 @@ const path = require('path');
 const { setupAnalysisHandlers } = require('../lib/analysis-service');
 const AppUpdater = require('./updater');
 const SwingAnalysisService = require('../lib/swing-analysis-service');
+const log = require('electron-log');
+
+// Configure electron-log
+log.transports.file.level = 'info';
+log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+log.transports.console.level = 'info';
+
+// Log file location
+const logPath = log.transports.file.getFile().path;
+console.log(`📝 Log file: ${logPath}`);
+
+// Override console methods to also write to file
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.log = (...args) => {
+  originalConsoleLog(...args);
+  log.info(...args);
+};
+
+console.error = (...args) => {
+  originalConsoleError(...args);
+  log.error(...args);
+};
+
+console.warn = (...args) => {
+  originalConsoleWarn(...args);
+  log.warn(...args);
+};
 
 // Windows 콘솔 인코딩을 UTF-8로 설정 (한글 깨짐 방지)
 // 로그는 영어로 출력하도록 변경하여 인코딩 문제 방지
@@ -148,14 +179,14 @@ app.whenReady().then(() => {
   
   // 스윙 분석 서비스 초기화 (mainWindow 전달)
   analysisService = new SwingAnalysisService(mainWindow);
-  console.log('✅ 스윙 분석 서비스 준비 완료');
+  console.log('✅ Swing analysis service ready');
   
-  // 앱 시작 시 센서 폴더 감지 시작 (데이터 수집은 안함)
+  // Start sensor folder detection on app startup (monitoring only, no data collection)
   try {
     analysisService.startMonitoringOnly();
-    console.log('✅ 센서 폴더 감지 시작 완료 (백그라운드)');
+    console.log('✅ Sensor folder detection started (background)');
   } catch (error) {
-    console.error('⚠️  센서 폴더 감지 시작 실패:', error.message);
+    console.error('⚠️  Failed to start sensor folder detection:', error.message);
   }
   
   // 기존 IPC 핸들러 설정
@@ -163,14 +194,33 @@ app.whenReady().then(() => {
   
   // ==================== 스윙 분석 IPC 핸들러 ====================
   
-  // 분석 세션 시작
+  // Start analysis session
   ipcMain.handle('analysis:start-session', async (event, { sessionUuid, totalSwingCount }) => {
     try {
-      console.log(`📡 세션 시작 요청: ${sessionUuid} (${totalSwingCount}회)`);
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`📡 [IPC] SESSION START REQUEST RECEIVED`);
+      console.log(`${'='.repeat(60)}`);
+      console.log(`📡 [IPC] Session UUID: ${sessionUuid}`);
+      console.log(`📡 [IPC] Total Swings: ${totalSwingCount}`);
+      console.log(`📡 [IPC] analysisService exists: ${!!analysisService}`);
+      console.log(`📡 [IPC] analysisService.isActive: ${analysisService?.isActive}`);
+      
+      if (!analysisService) {
+        console.error('📡 [IPC] ❌ analysisService is null!');
+        return { success: false, error: 'Analysis service not initialized' };
+      }
+      
       await analysisService.startSession(sessionUuid, totalSwingCount);
+      
+      console.log(`📡 [IPC] ✅ Session started successfully`);
+      console.log(`📡 [IPC] analysisService.isActive: ${analysisService.isActive}`);
+      console.log(`📡 [IPC] analysisService.monitor.isCollecting: ${analysisService.monitor?.isCollecting}`);
+      console.log(`${'='.repeat(60)}\n`);
+      
       return { success: true };
     } catch (error) {
-      console.error('세션 시작 실패:', error);
+      console.error('📡 [IPC] ❌ Session start failed:', error);
+      console.error('📡 [IPC] Error stack:', error.stack);
       return { success: false, error: error.message };
     }
   });

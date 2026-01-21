@@ -152,18 +152,23 @@ function SelectPage() {
         console.log('[setup] ✅ 세션 시작 성공, UUID:', response.data.session_uuid)
         setSessionUuid(response.data.session_uuid)
         
-        // 🔗 Electron IPC: 센서 수집 시작
+        // 🔗 Electron IPC: Start sensor data collection
         if (window.swingAnalysis) {
+          console.log('[setup] 📡 Calling window.swingAnalysis.startSession...')
           window.swingAnalysis.startSession(response.data.session_uuid, 3)
             .then((ipcResult) => {
+              console.log('[setup] 📡 IPC result received:', ipcResult)
               if (ipcResult.success) {
-                console.log('[setup] ✅ Electron 수집 모드 활성화')
+                console.log('[setup] ✅ Electron collection mode activated')
               } else {
-                console.error('[setup] ⚠️ Electron 수집 모드 활성화 실패:', ipcResult.error)
+                console.error('[setup] ⚠️ Electron collection mode activation failed:', ipcResult.error)
               }
             })
+            .catch((error) => {
+              console.error('[setup] ❌ IPC call failed:', error)
+            })
         } else {
-          console.warn('[setup] ⚠️ window.swingAnalysis 없음 (웹 환경)')
+          console.warn('[setup] ⚠️ window.swingAnalysis not found (web environment)')
         }
       } else {
         console.error('[setup] ⚠️ 세션 UUID 없음')

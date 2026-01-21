@@ -132,9 +132,17 @@ contextBridge.exposeInMainWorld('swingAnalysis', {
   
   // 새로운 샷 데이터 수신
   onNewShot: (callback) => {
-    const handler = (event, data) => callback(data);
+    console.log('[preload] 📡 Registering onNewShot listener for swing-analysis:shot-data');
+    const handler = (event, data) => {
+      console.log('[preload] 🎯 Received swing-analysis:shot-data event:', data);
+      callback(data);
+    };
     ipcRenderer.on('swing-analysis:shot-data', handler);
-    return () => ipcRenderer.removeListener('swing-analysis:shot-data', handler);
+    console.log('[preload] ✅ onNewShot listener registered');
+    return () => {
+      console.log('[preload] 🗑️ Removing onNewShot listener');
+      ipcRenderer.removeListener('swing-analysis:shot-data', handler);
+    };
   },
 
   // ========== 엔진 헬스 이벤트 ==========
