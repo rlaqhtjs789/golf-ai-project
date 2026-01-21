@@ -86,7 +86,15 @@ contextBridge.exposeInMainWorld('swingAnalysis', {
 
   // 영상 분석 결과 수신
   onVideoResult: (callback) => {
-    const handler = (event, data) => callback(data);
+    const handler = (event, data) => {
+      console.log('[preload] 🎬 영상 분석 결과 이벤트 수신:', {
+        hasSessionUuid: !!data?.sessionUuid,
+        hasResults: !!data?.results,
+        hasFront: !!data?.results?.front,
+        hasSide: !!data?.results?.side,
+      });
+      callback(data);
+    };
     ipcRenderer.on('swing-analysis:video-result', handler);
     return () => ipcRenderer.removeListener('swing-analysis:video-result', handler);
   },

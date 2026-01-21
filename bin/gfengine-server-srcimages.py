@@ -80,6 +80,21 @@ lib.CSharp_Gfe_new_Image__SWIG_3.restype = c_void_p
 lib.CSharp_Gfe_delete_Image.argtypes = [c_void_p]
 lib.CSharp_Gfe_delete_Image.restype = None
 
+# SrcImagesInterface 함수
+try:
+    lib.CSharp_Gfe_new_SrcImagesInterface.argtypes = []
+    lib.CSharp_Gfe_new_SrcImagesInterface.restype = c_void_p
+    lib.CSharp_Gfe_delete_SrcImagesInterface.argtypes = [c_void_p]
+    lib.CSharp_Gfe_delete_SrcImagesInterface.restype = None
+    lib.CSharp_Gfe_SrcImagesInterface_AddImage__SWIG_0.argtypes = [c_void_p, c_void_p]
+    lib.CSharp_Gfe_SrcImagesInterface_AddImage__SWIG_0.restype = None
+    lib.CSharp_Gfe_SrcImagesInterface_GetImageCount.argtypes = [c_void_p]
+    lib.CSharp_Gfe_SrcImagesInterface_GetImageCount.restype = c_int
+    HAS_SRCIMAGES_INTERFACE = True
+except AttributeError:
+    HAS_SRCIMAGES_INTERFACE = False
+    json_print({"type": "warning", "message": "SrcImagesInterface functions not available, using fallback"})
+
 # AnalyzeSwingVideo 함수
 lib.CSharp_Gfe_GFEngine2D_AnalyzeSwingVideo__SWIG_0.argtypes = [c_void_p, c_void_p, c_void_p]
 lib.CSharp_Gfe_GFEngine2D_AnalyzeSwingVideo__SWIG_0.restype = c_void_p
@@ -293,8 +308,70 @@ try:
                         "message": f"SrcImages created: {src_images.size()} frames"
                     })
                     
-                    # 현재는 Mock 결과 반환 (실제 DLL 호출은 복잡한 콜백 필요)
-                    result_data = {
+
+                    # 실제 DLL 호출 시도
+                    result_data = None
+                    try:
+                        if HAS_SRCIMAGES_INTERFACE and use_real_images and isinstance(src_images, SrcImagesInterfaceImpl):
+                            # 실제 SrcImagesInterface 생성
+                            src_interface_handle = lib.CSharp_Gfe_new_SrcImagesInterface()
+                            if src_interface_handle:
+                                # 각 이미지를 SrcImagesInterface에 추가
+                                for img_handle in src_images.image_handles:
+                                    lib.CSharp_Gfe_SrcImagesInterface_AddImage__SWIG_0(src_interface_handle, img_handle)
+                                
+                                json_print({
+                                    "type": "info",
+                                    "message": f"Added {src_images.size()} images to SrcImagesInterface"
+                                })
+                                
+                                # 실제 DLL 호출 시도 (콜백은 None으로 전달)
+                                # 주의: 콜백이 필요한 경우 실패할 수 있음
+                                try:
+                                    result_ptr = lib.CSharp_Gfe_GFEngine2D_AnalyzeSwingVideo__SWIG_0(
+                                        engine_handle,
+                                        src_interface_handle,
+                                        None  # 콜백 (필요시 구현)
+                                    )
+                                    
+                                    if result_ptr:
+                                        result_code = lib.CSharp_Gfe_SwingAnalysisResult_result_code_get(result_ptr)
+                                        json_print({
+                                            "type": "info",
+                                            "message": f"DLL analysis completed, result_code: {result_code}"
+                                        })
+                                        
+                                        # 결과 파싱은 복잡하므로 일단 Mock 데이터 사용
+                                        # TODO: 실제 결과 파싱 구현 필요
+                                        json_print({
+                                            "type": "warning",
+                                            "message": "DLL call succeeded but result parsing not implemented, using mock data"
+                                        })
+                                        
+                                        # 결과 정리
+                                        lib.CSharp_Gfe_delete_SwingAnalysisResult(result_ptr)
+                                    
+                                    # SrcImagesInterface 정리
+                                    lib.CSharp_Gfe_delete_SrcImagesInterface(src_interface_handle)
+                                except Exception as dll_error:
+                                    json_print({
+                                        "type": "warning",
+                                        "message": f"DLL call failed: {str(dll_error)}, using mock data"
+                                    })
+                                    if src_interface_handle:
+                                        try:
+                                            lib.CSharp_Gfe_delete_SrcImagesInterface(src_interface_handle)
+                                        except:
+                                            pass
+                    except Exception as real_call_error:
+                        json_print({
+                            "type": "warning",
+                            "message": f"Real DLL call attempt failed: {str(real_call_error)}, using mock data"
+                        })
+                    
+                    # Mock 결과 반환 (실제 DLL 호출 실패 시 또는 기본값)
+                    if result_data is None:
+                        result_data = {
                         "result_code": 0,
                         "value": {
                             "poseDirection": params.get('direction', 0),
@@ -319,6 +396,22 @@ try:
                                     "severityName": "kNotBad",
                                     "score": 0.45,
                                     "evidenceStepId": 3
+                                },
+                                {
+                                    "type": 14,
+                                    "typeName": "kFrontDownSlide",
+                                    "severity": 1,
+                                    "severityName": "kNotBad",
+                                    "score": 0.55,
+                                    "evidenceStepId": 4
+                                },
+                                {
+                                    "type": 16,
+                                    "typeName": "kFrontImpactChicken",
+                                    "severity": 0,
+                                    "severityName": "kBad",
+                                    "score": 0.35,
+                                    "evidenceStepId": 5
                                 }
                             ],
                             "shoulderStanceRatio": 0.85,

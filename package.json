@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/",
+    "build": "vite build --base=/ && node copy-video.js",
     "build:check": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -86,6 +86,14 @@
       {
         "from": "bin/libwinpthread-1.dll",
         "to": "bin/libwinpthread-1.dll"
+      },
+      {
+        "from": "node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe",
+        "to": "ffmpeg/ffmpeg.exe"
+      },
+      {
+        "from": "node_modules/@ffprobe-installer/win32-x64/ffprobe.exe",
+        "to": "ffmpeg/ffprobe.exe"
       }
     ]
   },

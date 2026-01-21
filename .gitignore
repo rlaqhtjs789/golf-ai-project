@@ -7,11 +7,28 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
-dist
-dist-ssr
-dist-electron
-*.local
+
+# Build outputs
+dist/
+dist-ssr/
+dist-electron/
+dist-python/
+build-python/
+
+# Python build artifacts
+*.spec
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Executable files (build artifacts - not tracked in git)
+bin/*.exe
+bin/GFEngine2DLog
+
+# Note: DLL files in bin/ are tracked as they are core dependencies
 
 # Editor directories and files
 .vscode/*
@@ -24,10 +41,16 @@ dist-electron
 *.sln
 *.sw?
 
-# DLL files (add manually, not tracked in git)
-bin/*.dll
-bin/*.exe
-
 # Electron build artifacts
 out/
 release/
+
+# Local environment files
+*.local
+.env
+.env.local
+.env.*.local
+
+# OS files
+Thumbs.db
+.DS_Store

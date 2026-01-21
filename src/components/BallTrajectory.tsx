@@ -43,17 +43,47 @@ export function BallTrajectory({ trajectories, className = '' }: BallTrajectoryP
     ctx.fillRect(0, 0, width, height)
 
     // 모든 궤적의 좌표 범위 계산 (Top-down view: x-z 평면)
-    const allPositions = trajectories.flat()
+    // 각 궤적을 시간 순서대로 정렬 (z 좌표가 증가하는 방향 = 골프공이 날아가는 방향)
+    const sortedTrajectories = trajectories.map(positions => {
+      // z 좌표 기준으로 정렬 (시작점 z < 끝점 z)
+      const sorted = [...positions].sort((a, b) => a.z - b.z)
+      return sorted
+    })
+    
+    const allPositions = sortedTrajectories.flat()
     const xCoords = allPositions.map(p => p.x)
     const zCoords = allPositions.map(p => p.z)
+    
+    // 시작점들의 x 좌표 (가운데 정렬을 위해)
+    const startXCoords = sortedTrajectories.map(positions => positions[0]?.x).filter(x => x !== undefined)
+    const startXCenter = startXCoords.length > 0 
+      ? startXCoords.reduce((sum, x) => sum + x, 0) / startXCoords.length 
+      : 0
     
     const minX = Math.min(...xCoords)
     const maxX = Math.max(...xCoords)
     const minZ = Math.min(...zCoords)
     const maxZ = Math.max(...zCoords)
     
-    const rangeX = maxX - minX || 1
-    const rangeZ = maxZ - minZ || 1
+    // x 좌표 범위 계산 (실제 데이터 범위 사용, 과도한 확대 방지)
+    // 시작점 중심 기준으로 좌우 편차 계산
+    const leftDeviation = Math.abs(minX - startXCenter)
+    const rightDeviation = Math.abs(maxX - startXCenter)
+    const maxDeviation = Math.max(leftDeviation, rightDeviation, 1) // 최소 1 보장
+    
+    // 실제 x 좌표 범위 사용 (대칭 확대하지 않음)
+    // 골프공은 거의 직선으로 날아가므로 실제 편차만 표시
+    const rangeX = maxDeviation * 2.5 // 약간의 여유만 추가 (과도한 확대 방지)
+    
+    // 디버깅: 좌표 범위 확인
+    console.log('[BallTrajectory] 좌표 범위:', {
+      x: { min: minX, max: maxX, center: startXCenter, leftDeviation, rightDeviation, maxDeviation, range: rangeX },
+      z: { min: minZ, max: maxZ, range: maxZ - minZ },
+      positionsCount: allPositions.length
+    })
+    
+    // 범위가 너무 작으면 최소값 보장 (일직선 방지)
+    const rangeZ = Math.max(maxZ - minZ, 1)
 
     // 여백 추가
     const padding = 40
@@ -61,8 +91,13 @@ export function BallTrajectory({ trajectories, className = '' }: BallTrajectoryP
     const drawHeight = height - padding * 2
 
     // 좌표 변환 함수 (골프 좌표계 → Canvas 좌표계)
+    // x 좌표: 시작점 중심으로 매핑 (가운데에서 시작, 실제 편차만 표시)
     const toCanvasX = (x: number) => {
-      return padding + ((x - minX) / rangeX) * drawWidth
+      // 시작점 중심 기준으로 오프셋 계산
+      const offsetX = x - startXCenter
+      // 실제 편차 범위로 정규화 (중심이 0.5가 되도록)
+      const normalizedX = 0.5 + (offsetX / rangeX)
+      return padding + normalizedX * drawWidth
     }
     const toCanvasY = (z: number) => {
       // z축을 y축으로 매핑 (위쪽이 먼 거리)
@@ -94,8 +129,8 @@ export function BallTrajectory({ trajectories, className = '' }: BallTrajectoryP
     
     ctx.setLineDash([])
 
-    // 각 궤적을 다른 색상으로 그리기
-    trajectories.forEach((positions, index) => {
+    // 각 궤적을 다른 색상으로 그리기 (정렬된 궤적 사용)
+    sortedTrajectories.forEach((positions, index) => {
       if (!positions || positions.length === 0) return
       
       const color = TRAJECTORY_COLORS[index] || TRAJECTORY_COLORS[0]
@@ -113,11 +148,32 @@ export function BallTrajectory({ trajectories, className = '' }: BallTrajectoryP
       ctx.shadowBlur = 10
       ctx.globalAlpha = 0.8 // 약간 투명하게
       ctx.beginPath()
-      ctx.moveTo(toCanvasX(positions[0].x), toCanvasY(positions[0].z))
       
-      for (let i = 1; i < positions.length; i++) {
-        ctx.lineTo(toCanvasX(positions[i].x), toCanvasY(positions[i].z))
+      // 첫 번째 점으로 이동
+      const firstX = toCanvasX(positions[0].x)
+      const firstZ = toCanvasY(positions[0].z)
+      ctx.moveTo(firstX, firstZ)
+      
+      // 디버깅: 첫 몇 개 좌표 확인
+      if (index === 0) {
+        console.log('[BallTrajectory] 첫 번째 궤적 좌표 샘플:', {
+          first: { x: positions[0].x, z: positions[0].z, canvasX: firstX, canvasZ: firstZ },
+          second: { x: positions[1]?.x, z: positions[1]?.z },
+          third: { x: positions[2]?.x, z: positions[2]?.z },
+          last: { x: positions[positions.length - 1]?.x, z: positions[positions.length - 1]?.z }
+        })
       }
+      
+      // 모든 점을 시간 순서대로 연결 (골프공이 날아가는 방향)
+      // z 좌표가 증가하는 방향이 골프공이 날아가는 방향 (시작점 → 끝점)
+      for (let i = 1; i < positions.length; i++) {
+        const canvasX = toCanvasX(positions[i].x)
+        const canvasZ = toCanvasY(positions[i].z)
+        ctx.lineTo(canvasX, canvasZ)
+      }
+      
+      // 부드러운 곡선을 위해 quadraticCurveTo 사용 (선택사항)
+      // 하지만 일단 직선 연결로 유지
       ctx.stroke()
       ctx.shadowBlur = 0
       ctx.globalAlpha = 1.0

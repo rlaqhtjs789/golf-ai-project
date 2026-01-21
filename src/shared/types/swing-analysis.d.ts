@@ -13,6 +13,13 @@ interface SwingAnalysisAPI {
   // 이벤트 리스너
   onProgress: (callback: (data: any) => void) => () => void;
   onShotComplete: (callback: (data: any) => void) => () => void;
+  onNewShot: (callback: (data: any) => void) => () => void;
+  onShotData: (callback: (data: any) => void) => () => void;
+  onVideoResult: (callback: (data: any) => void) => () => void;
+  onVideoAnalysisStart: (callback: (data: any) => void) => () => void;
+  onVideoAnalysisProgress: (callback: (data: any) => void) => () => void;
+  onVideoAnalysisComplete: (callback: (data: any) => void) => () => void;
+  onVideoAnalysisError: (callback: (data: any) => void) => () => void;
   onShotData: (callback: (data: any) => void) => () => void;
   onVideoResult: (callback: (data: any) => void) => () => void;
   onSessionProgress: (callback: (data: any) => void) => () => void;

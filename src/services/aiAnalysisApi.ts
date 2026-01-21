@@ -190,37 +190,66 @@ export async function startSession(params: SessionStartParams): Promise<ApiRespo
  * 스윙 데이터 저장
  */
 export async function saveSwing(sessionUuid: string, shotData: SwingData, video?: File): Promise<ApiResponse<any>> {
-  const formData = new FormData();
-
-  if (video) {
-    formData.append('video', video);
-  }
-
-  // shot_data를 FormData에 추가
-  Object.entries(shotData).forEach(([key, value]) => {
-    formData.append(`shot_data[${key}]`, String(value));
-  });
-
   // shop_id와 pcid 자동 추가
   const shopSettings = getShopSettings();
-  if (shopSettings.shop_id) {
-    formData.append('shop_id', String(shopSettings.shop_id));
+  
+  // 요청 본문 구성: shot_data 객체로 감싸기
+  const requestBody: any = {
+    shot_data: shotData,
+  };
+  
+  // shop_id와 pcid가 null이 아닐 때만 추가
+  if (shopSettings.shop_id !== null && shopSettings.shop_id !== undefined) {
+    requestBody.shop_id = shopSettings.shop_id;
   }
-  if (shopSettings.pcid) {
-    formData.append('pcid', shopSettings.pcid);
-  }
-
-  const response = await fetch(`${API_BASE_URL}/ai-analysis/sessions/${sessionUuid}/swings`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || '스윙 데이터 저장 실패');
+  if (shopSettings.pcid !== null && shopSettings.pcid !== undefined) {
+    requestBody.pcid = shopSettings.pcid;
   }
 
-  return response.json();
+  // video가 있으면 FormData 사용, 없으면 JSON 사용
+  if (video) {
+    const formData = new FormData();
+    formData.append('video', video);
+    formData.append('shot_data', JSON.stringify(shotData));
+    
+    if (shopSettings.shop_id !== null && shopSettings.shop_id !== undefined) {
+      formData.append('shop_id', String(shopSettings.shop_id));
+    }
+    if (shopSettings.pcid !== null && shopSettings.pcid !== undefined) {
+      formData.append('pcid', shopSettings.pcid);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/ai-analysis/sessions/${sessionUuid}/swings`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || '스윙 데이터 저장 실패');
+    }
+
+    return response.json();
+  } else {
+    // JSON 형식으로 전송
+    console.log('[API] saveSwing 요청 데이터:', requestBody);
+    
+    const response = await fetch(`${API_BASE_URL}/ai-analysis/sessions/${sessionUuid}/swings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('[API] saveSwing 에러 응답:', error);
+      throw new Error(error.message || '스윙 데이터 저장 실패');
+    }
+
+    return response.json();
+  }
 }
 
 /**

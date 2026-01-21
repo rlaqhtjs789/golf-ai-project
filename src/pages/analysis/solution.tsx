@@ -21,14 +21,19 @@ import { getSession, type Improvements } from '@/services/aiAnalysisApi'
 
 // 🔗 API 연동 지점 4: 솔루션 영상 데이터 조회
 // TODO: GET /api/analysis/videos/{problemId} 에서 동적으로 로드
-// 현재는 MOCK_VIDEOS 사용, API 연동 후 제거
+// 현재는 샘플 영상 사용, API 연동 후 제거
+// public 폴더의 sample-swing-video*.mp4 파일들 사용 (빌드 시 dist로 자동 복사)
+const SAMPLE_VIDEO_URL = '/sample-swing-video.mp4'
+const SAMPLE_VIDEO_URL2 = '/sample-swing-video2.mp4'
+const SAMPLE_VIDEO_URL3 = '/sample-swing-video3.mp4'
+const SAMPLE_VIDEO_URL4 = '/sample-swing-video4.mp4'
+const SAMPLE_VIDEO_URL5 = '/sample-swing-video5.mp4'
 const MOCK_VIDEOS = [
-  { id: '1', title: '백스윙 교정 영상 1', thumbnail: '', videoUrl: '', status: 'correct' },
-  { id: '2', title: '백스윙 교정 영상 2', thumbnail: '', videoUrl: '', status: 'incorrect' },
-  { id: '3', title: '백스윙 교정 영상 3', thumbnail: '', videoUrl: '', status: 'correct' },
-  { id: '4', title: '백스윙 교정 영상 4', thumbnail: '', videoUrl: '', status: 'correct' },
-  { id: '5', title: '백스윙 교정 영상 5', thumbnail: '', videoUrl: '', status: 'incorrect' },
-  { id: '6', title: '백스윙 교정 영상 6', thumbnail: '', videoUrl: '', status: 'correct' },
+  { id: '1', title: '덮어치기-수직낙하', thumbnail: '', videoUrl: SAMPLE_VIDEO_URL, status: 'correct' },
+  { id: '2', title: '배치기-펌핑드릴', thumbnail: '', videoUrl: SAMPLE_VIDEO_URL2, status: 'incorrect' },
+  { id: '3', title: '체중이동타이밍', thumbnail: '', videoUrl: SAMPLE_VIDEO_URL3, status: 'correct' },
+  { id: '4', title: '어퍼블로감각', thumbnail: '', videoUrl: SAMPLE_VIDEO_URL4, status: 'correct' },
+  { id: '5', title: '지면반력활용', thumbnail: '', videoUrl: SAMPLE_VIDEO_URL5, status: 'incorrect' }
 ]
 
 
@@ -51,12 +56,40 @@ const getDistanceTrendData = (swingHistory: SwingData[]) => {
 
     // 각 스윙 데이터에서 해당 샷의 거리를 추출
     swingHistory.forEach((swing) => {
-      if (swing.measurements[i]) {
-        point[`swing${swing.swingNumber}`] = swing.averages.distance || (200 + Math.random() * 70)
+      // measurements 배열이 있고 해당 인덱스에 데이터가 있는지 확인
+      if (swing.measurements && swing.measurements.length > i && swing.measurements[i]) {
+        // measurements 배열에서 실제 거리 값 사용 (숫자로 변환)
+        const distance = typeof swing.measurements[i].distance === 'number' 
+          ? swing.measurements[i].distance 
+          : Number(swing.measurements[i].distance || 0)
+        point[`swing${swing.swingNumber}`] = distance || 0
+      } else {
+        // measurements 배열이 없거나 해당 인덱스에 데이터가 없으면 0 또는 평균값 사용
+        point[`swing${swing.swingNumber}`] = swing.averages?.distance || 0
       }
     })
 
     return point
+  })
+
+  // 디버깅: 데이터 확인
+  console.log('[solution] getDistanceTrendData 결과:', {
+    swingHistoryLength: swingHistory.length,
+    dataLength: data.length,
+    firstDataPoint: data[0],
+    allDataPoints: data,
+    swingHistory: swingHistory.map(swing => ({
+      swingNumber: swing.swingNumber,
+      measurementsLength: swing.measurements?.length || 0,
+      measurements: swing.measurements?.map((m, idx) => ({ 
+        index: idx,
+        distance: m.distance,
+        distanceType: typeof m.distance,
+        clubSpeed: m.clubSpeed,
+        ballSpeed: m.ballSpeed
+      })) || [],
+      averages: swing.averages
+    }))
   })
 
   return data
@@ -175,14 +208,22 @@ function SolutionPage() {
         console.log('[solution] improvements API 호출 시작, sessionUuid:', sessionUuid)
         const response = await getSession(sessionUuid)
         
-        if (response.success && response.data.improvements) {
+        console.log('[solution] 📦 API 응답 전체:', response)
+        console.log('[solution] 📦 response.success:', response.success)
+        console.log('[solution] 📦 response.data:', response.data)
+        console.log('[solution] 📦 response.data.improvements:', response.data?.improvements)
+        
+        if (response.success && response.data?.improvements) {
           console.log('[solution] ✅ improvements 받음:', response.data.improvements)
           setImprovements(response.data.improvements)
         } else {
-          console.log('[solution] ⚠️ improvements 없음')
+          console.log('[solution] ⚠️ improvements 없음 - response:', response)
+          console.log('[solution] ⚠️ response.success:', response.success)
+          console.log('[solution] ⚠️ response.data?.improvements:', response.data?.improvements)
         }
       } catch (error) {
         console.error('[solution] ❌ improvements API 에러:', error)
+        console.error('[solution] ❌ 에러 상세:', error instanceof Error ? error.message : String(error))
       } finally {
         setImprovementsLoading(false)
       }
@@ -249,8 +290,32 @@ function SolutionPage() {
       })
     })
     
+    // typeName 기준으로 중복 제거 (같은 문제가 정면/측면에서 모두 나와도 하나로 취급)
+    // 단, 더 나쁜 점수(낮은 점수)를 가진 것을 유지
+    const uniqueProblemsMap = new Map<string, any>()
+    allProblems.forEach((problem) => {
+      const typeName = problem.typeName
+      if (!typeName) return // typeName이 없으면 스킵
+      
+      const existing = uniqueProblemsMap.get(typeName)
+      if (!existing || (problem.score !== undefined && existing.score !== undefined && problem.score < existing.score)) {
+        // 기존 문제가 없거나, 현재 문제가 더 나쁜 점수를 가지면 교체
+        uniqueProblemsMap.set(typeName, problem)
+      } else if (existing && problem.videoType && !existing.videoTypes) {
+        // 여러 영상에서 같은 문제가 나온 경우, videoTypes 배열로 관리
+        existing.videoTypes = [existing.videoType, problem.videoType]
+        delete existing.videoType
+      }
+    })
+    
+    const uniqueProblems = Array.from(uniqueProblemsMap.values())
+    
+    console.log('[solution] 전체 문제점:', allProblems.length, '개')
+    console.log('[solution] 중복 제거 후:', uniqueProblems.length, '개')
+    console.log('[solution] 문제점 목록:', uniqueProblems.map(p => p.typeName || p.koreanName))
+    
     // getTopNProblems가 점수순 정렬, koreanName, description, percentage 등을 모두 추가해줌
-    return getTopNProblems(allProblems, 3)
+    return getTopNProblems(uniqueProblems, 3)
   }, [hasVideoAnalysis, videoAnalysisResults])
   
   // 영상 분석 결과 콘솔 로그
@@ -313,6 +378,19 @@ function SolutionPage() {
     })
   }
 
+  // 영상/차트 전환 핸들러
+  const handleSwitchView = () => {
+    if (isVideoType) {
+      // 영상형 → 차트형
+      console.log('[solution] 영상형 → 차트형 전환')
+      setStep('solution-chart')
+    } else {
+      // 차트형 → 영상형
+      console.log('[solution] 차트형 → 영상형 전환')
+      setStep('solution-video')
+    }
+  }
+
   // 전환 중이면 아무것도 렌더링하지 않음
   if (isTransitioning) {
     return <div />
@@ -322,7 +400,20 @@ function SolutionPage() {
   if (isVideoType) {
     return (
       <>
-        <div className="min-h-screen flex flex-col py-8 px-4 overflow-auto">
+        <div className="h-screen flex flex-col py-4 px-4 pb-32 overflow-hidden">
+          {/* 상단: 전환 버튼 */}
+          <div className="mb-4 text-center">
+            <button
+              onClick={handleSwitchView}
+              className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-gray-200 font-semibold rounded-xl transition-colors flex items-center gap-2 mx-auto"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              차트 보기
+            </button>
+          </div>
+
           {/* 상단: 개선 결과 요약 */}
           <div className="mb-8 text-center animate-fade-in mx-auto w-4/5">
             <p className="text-lg md:text-xl text-gray-400 mb-2">
@@ -332,20 +423,42 @@ function SolutionPage() {
               {improvementsLoading ? (
                 '개선 가능 수치 분석 중...'
               ) : improvements?.main_message ? (
-                improvements.main_message.split(',').map((text, index) => (
-                  <span key={index}>
-                    {text.trim()}
-                    {index < improvements.main_message!.split(',').length - 1 && ', '}
-                  </span>
-                ))
+                <>
+                  회원님은,{' '}
+                  {improvements.main_message.split(',').map((text, index, array) => {
+                    const trimmed = text.trim()
+                    // 퍼센티지 추출 및 반올림
+                    const percentMatch = trimmed.match(/(\d+\.?\d*)%/)
+                    if (percentMatch) {
+                      const percent = Math.round(parseFloat(percentMatch[1]))
+                      const beforePercent = trimmed.substring(0, percentMatch.index)
+                      const afterPercent = trimmed.substring(percentMatch.index! + percentMatch[0].length)
+                      return (
+                        <span key={index}>
+                          <span className="text-green-400 font-bold">
+                            {beforePercent} {percent}%{afterPercent}
+                          </span>
+                          {index < array.length - 1 && ', '}
+                        </span>
+                      )
+                    }
+                    return (
+                      <span key={index}>
+                        <span className="text-green-400 font-bold">{trimmed}</span>
+                        {index < array.length - 1 && ', '}
+                      </span>
+                    )
+                  })}
+                  {' 개선이 가능해요'}
+                </>
               ) : improvements?.improvements ? (
                 <>
                   회원님은, 
                   {improvements.improvements.distance?.improvable && (
-                    <span className="text-purple-400"> 비거리 {improvements.improvements.distance.improvable_percentage?.toFixed(1)}%</span>
+                    <span className="text-red-400 font-bold"> 비거리 {Math.round(improvements.improvements.distance.improvable_percentage || 0)}%</span>
                   )}
                   {improvements.improvements.ball_flight?.improvable && (
-                    <span className="text-cyan-400">, {improvements.improvements.ball_flight.current} 구질 {improvements.improvements.ball_flight.improvable_percentage?.toFixed(1)}%</span>
+                    <span className="text-cyan-400 font-bold">, {improvements.improvements.ball_flight.current} 구질 {Math.round(improvements.improvements.ball_flight.improvable_percentage || 0)}%</span>
                   )}
                   {' 개선이 가능해요'}
                 </>
@@ -393,9 +506,15 @@ function SolutionPage() {
                         )}
                         {/* 영상 타입 배지 */}
                         <div className="absolute top-2 right-2">
-                          <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
-                            {problem.videoType === 'front' ? '📹 정면' : '📹 측면'}
-                          </span>
+                          {problem.videoTypes && problem.videoTypes.length > 1 ? (
+                            <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
+                              📹 정면/측면
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
+                              {problem.videoType === 'front' ? '📹 정면' : problem.videoType === 'side' ? '📹 측면' : '📹'}
+                            </span>
+                          )}
                         </div>
                         {/* 심각도 배지 */}
                         <div className="absolute top-2 left-2">
@@ -483,30 +602,113 @@ function SolutionPage() {
           </div>
 
           {/* 하단: 맞춤 솔루션 영상 */}
-          <div className="flex-1 w-full mb-8">
-            <h2 className="text-lg md:text-xl font-bold text-gray-100 mb-4 text-center">
-              회원님을 위한 맞춤 솔루션 [ 백스윙 편 ]
+          <div className="flex-1 w-full flex flex-col min-h-0">
+            <h2 className="text-lg md:text-xl font-bold text-gray-100 mb-3 text-center flex-shrink-0">
+              회원님을 위한 맞춤 솔루션 [ {(() => {
+                // 문제점 단계별 분류
+                const backswingProblems = ['Top', 'TopSway', 'TopReverse', 'TopUpright', 'TopArmsync', 'TopOverswing', 'TopFlat', 'TopSteep', 'TopLowHand', 'TopOverrotation']
+                const downswingProblems = ['Down', 'DownSpinOut', 'DownSlide', 'DownDipping', 'DownCasting', 'DownOverTheTop']
+                const impactProblems = ['Impact', 'ImpactChicken', 'ImpactFlip', 'ImpactScooping']
+                const finishProblems = ['Finish', 'FinishBalance']
+                
+                // top3Problems에서 가장 많은 문제가 발생한 단계 찾기
+                if (top3Problems.length === 0) {
+                  return '백스윙 편'
+                }
+                
+                let backswingCount = 0
+                let downswingCount = 0
+                let impactCount = 0
+                let finishCount = 0
+                
+                top3Problems.forEach(problem => {
+                  const typeName = problem.typeName || ''
+                  if (backswingProblems.some(keyword => typeName.includes(keyword))) {
+                    backswingCount++
+                  } else if (downswingProblems.some(keyword => typeName.includes(keyword))) {
+                    downswingCount++
+                  } else if (impactProblems.some(keyword => typeName.includes(keyword))) {
+                    impactCount++
+                  } else if (finishProblems.some(keyword => typeName.includes(keyword))) {
+                    finishCount++
+                  }
+                })
+                
+                // 가장 많은 문제가 발생한 단계 결정
+                const maxCount = Math.max(backswingCount, downswingCount, impactCount, finishCount)
+                if (maxCount === backswingCount && backswingCount > 0) {
+                  return '백스윙 편'
+                } else if (maxCount === downswingCount && downswingCount > 0) {
+                  return '다운스윙 편'
+                } else if (maxCount === impactCount && impactCount > 0) {
+                  return '임팩트 편'
+                } else if (maxCount === finishCount && finishCount > 0) {
+                  return '피니시 편'
+                }
+                
+                // 기본값
+                return '백스윙 편'
+              })()} ]
             </h2>
 
             {/* Swiper 슬라이더 */}
-            <Swiper
-              modules={[FreeMode]}
-              spaceBetween={16}
-              slidesPerView={4.2}
-              freeMode={true}
-              breakpoints={{
-                640: { slidesPerView: 4.2 },
-                1024: { slidesPerView: 4.2 },
-                1280: { slidesPerView: 4.2 },
-              }}
-              className="pb-12">
+            <div className="flex-1 min-h-0">
+              <Swiper
+                modules={[FreeMode]}
+                spaceBetween={12}
+                slidesPerView={6}
+                freeMode={true}
+                breakpoints={{
+                  640: { slidesPerView: 6 },
+                  1024: { slidesPerView: 6 },
+                  1280: { slidesPerView: 6 },
+                }}
+                className="h-full">
               {MOCK_VIDEOS.map((video) => (
                 <SwiperSlide key={video.id}>
                   <button
                     onClick={() => setSelectedVideo(video)}
-                    className="group relative aspect-9/16 bg-slate-800 rounded-2xl overflow-hidden border-2 border-slate-700 transition-all w-full">
-                    {/* 썸네일 */}
-                    {video.thumbnail ? (
+                    className="group relative h-full bg-slate-800 rounded-xl overflow-hidden border-2 border-slate-700 transition-all w-full max-h-[280px]">
+                    {/* 영상 썸네일 */}
+                    {video.videoUrl ? (
+                      <video
+                        src={video.videoUrl}
+                        className="w-full h-full object-cover pointer-events-none"
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onLoadedMetadata={(e) => {
+                          // 영상의 첫 프레임을 썸네일로 사용
+                          const videoElement = e.currentTarget
+                          try {
+                            // 메타데이터 로드 후 첫 프레임으로 이동
+                            if (videoElement.readyState >= 1) {
+                              videoElement.currentTime = 0.1
+                            }
+                          } catch (error) {
+                            console.error('[Solution] 썸네일 설정 실패:', error)
+                          }
+                        }}
+                        onLoadedData={(e) => {
+                          // 데이터 로드 후 첫 프레임으로 이동
+                          const videoElement = e.currentTarget
+                          try {
+                            if (videoElement.readyState >= 2) {
+                              videoElement.currentTime = 0.1
+                            }
+                          } catch (error) {
+                            console.error('[Solution] 썸네일 데이터 로드 실패:', error)
+                          }
+                        }}
+                        onSeeked={(e) => {
+                          // 프레임 이동 완료 후 일시정지 (썸네일만 표시)
+                          e.currentTarget.pause()
+                        }}
+                        onError={(e) => {
+                          console.error('[Solution] 영상 썸네일 로드 실패:', video.videoUrl, e)
+                        }}
+                      />
+                    ) : video.thumbnail ? (
                       <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
@@ -533,11 +735,12 @@ function SolutionPage() {
                   </button>
                 </SwiperSlide>
               ))}
-            </Swiper>
+              </Swiper>
+            </div>
           </div>
 
           {/* 하단: 다시 스윙하러가기 버튼 */}
-          <div className="mt-8 text-center mx-auto">
+          <div className="mt-4 mb-20 text-center mx-auto flex-shrink-0">
             <button
               onClick={handleRetrySwing}
               className="px-12 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
@@ -587,14 +790,81 @@ function SolutionPage() {
 
   // 차트형 렌더링
   return (
-    <div className="min-h-screen w-4/5 flex flex-col py-8 px-4 overflow-auto">
+    <div className="min-h-screen w-full flex flex-col py-8 px-4 pb-32 overflow-auto">
+      {/* 상단: 전환 버튼 */}
+      <div className="mb-4 text-center">
+        <button
+          onClick={handleSwitchView}
+          className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-gray-200 font-semibold rounded-xl transition-colors flex items-center gap-2 mx-auto"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          영상 보기
+        </button>
+      </div>
+
       {/* 상단: 개선 결과 요약 */}
       <div className="mb-16 text-center animate-fade-in">
         <p className="text-lg md:text-xl text-gray-400 mb-2">
-          {swingHistory.length > 0 ? swingHistory[swingHistory.length - 1].swingNumber : 0}번째 스윙 완료! 지금까지의 데이터를 비교 분석한 결과입니다
+          {swingHistory.length > 0 ? `${swingHistory[0].swingNumber}~${swingHistory[swingHistory.length - 1].swingNumber}번째 스윙` : '0번째 스윙'} 완료! 지금까지의 데이터를 비교 분석한 결과입니다
         </p>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-100">
-          회원님은, <span className={improvementRate > 0 ? 'text-green-400' : 'text-red-400'}>비거리 {improvementRate > 0 ? '+' : ''}{Number(improvementRate.toFixed(2))}%</span>, <span className="text-cyan-400">정확도 {Number((16.0).toFixed(2))}%</span> 개선되었어요!
+          {improvementsLoading ? (
+            '개선 가능 수치 분석 중...'
+          ) : improvements?.main_message ? (
+            <>
+              회원님은,{' '}
+              {improvements.main_message.split(',').map((text, index, array) => {
+                const trimmed = text.trim()
+                // 퍼센티지 추출 및 반올림
+                const percentMatch = trimmed.match(/(\d+\.?\d*)%/)
+                if (percentMatch) {
+                  const percent = Math.round(parseFloat(percentMatch[1]))
+                  const beforePercent = trimmed.substring(0, percentMatch.index)
+                  const afterPercent = trimmed.substring(percentMatch.index! + percentMatch[0].length)
+                  
+                  // 텍스트 내용에 따라 색상 결정
+                  const isDistance = beforePercent.includes('비거리')
+                  const isAccuracy = beforePercent.includes('정확도') || beforePercent.includes('푸쉬') || beforePercent.includes('풀') || beforePercent.includes('구질') || beforePercent.includes('슬라이스') || beforePercent.includes('훅') || beforePercent.includes('스핀') || beforePercent.includes('런치각')
+                  const colorClass = isDistance ? 'text-red-400' : isAccuracy ? 'text-cyan-400' : 'text-green-400'
+                  
+                  return (
+                    <span key={index}>
+                      {beforePercent}{' '}
+                      <span className={`${colorClass} font-bold`}>
+                        {percent}%
+                      </span>
+                      {afterPercent}
+                      {index < array.length - 1 && ', '}
+                    </span>
+                  )
+                }
+                return (
+                  <span key={index}>
+                    <span className="text-green-400 font-bold">{trimmed}</span>
+                    {index < array.length - 1 && ', '}
+                  </span>
+                )
+              })}
+              {' 개선이 가능해요'}
+            </>
+          ) : improvements?.improvements ? (
+            <>
+              회원님은, 
+              {improvements.improvements.distance?.improvable && (
+                <span className="text-red-400 font-bold"> 비거리 {Math.round(improvements.improvements.distance.improvable_percentage || 0)}%</span>
+              )}
+              {improvements.improvements.ball_flight?.improvable && (
+                <span className="text-cyan-400 font-bold">, {improvements.improvements.ball_flight.current} 구질 {Math.round(improvements.improvements.ball_flight.improvable_percentage || 0)}%</span>
+              )}
+              {' 개선이 가능해요'}
+            </>
+          ) : (
+            <>
+              회원님은, <span className={improvementRate > 0 ? 'text-green-400' : 'text-red-400'}>비거리 {improvementRate > 0 ? '+' : ''}{Number(improvementRate.toFixed(2))}%</span>, <span className="text-cyan-400">정확도 {Number((16.0).toFixed(2))}%</span> 개선되었어요!
+            </>
+          )}
         </h1>
       </div>
 
@@ -604,7 +874,7 @@ function SolutionPage() {
         <div className='w-full'>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h2 className="text-xl md:text-2xl font-bold text-gray-100">
-              비거리 추이 ({swingHistory.length > 0 ? swingHistory[swingHistory.length - 1].swingNumber : 0}회차)
+              비거리 추이 ({swingHistory.length > 0 ? `${swingHistory[0].swingNumber}~${swingHistory[swingHistory.length - 1].swingNumber}회차` : '0회차'})
             </h2>
             <div className="flex gap-3 flex-wrap">
               <div className="bg-purple-500/5 rounded-xl px-4 py-3 border border-purple-400/50">
@@ -723,7 +993,7 @@ function SolutionPage() {
         <div className='w-full'>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h2 className="text-xl md:text-2xl font-bold text-gray-100">
-              구질 추이 ({swingHistory.length > 0 ? swingHistory[swingHistory.length - 1].swingNumber : 0}회차)
+              구질 추이 ({swingHistory.length > 0 ? `${swingHistory[0].swingNumber}~${swingHistory[swingHistory.length - 1].swingNumber}회차` : '0회차'})
             </h2>
             <div className={`rounded-xl px-4 py-3 border ${straightQualityImprovement > 0 ? 'bg-green-500/5 border-green-400/50' : 'bg-red-500/5 border-red-400/50'}`}>
               <p className="text-xs text-gray-400 mb-1">스트레이트 구질 개선</p>
@@ -822,7 +1092,7 @@ function SolutionPage() {
       </div>
 
       {/* 하단: 버튼 (3개) */}
-      <div className="mt-20 flex gap-4 justify-center flex-wrap">
+      <div className="mt-20 mb-20 flex gap-4 justify-center flex-wrap">
         <button
           onClick={handleNewSwing}
           className="px-8 py-4 bg-linear-to-r from-blue-500 to-blue-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-blue-500/50">

@@ -10,7 +10,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSessionStore, selectCurrentStep, selectFirstSwingProgress, selectSecondSwingProgress, selectSwingCount, selectVideoAnalysisResults, selectSessionUuid } from '@/features/golf-session/model/sessionStore'
-import type { SwingData } from '@/features/golf-session/types/session.type'
 import { SWING_COUNT_PER_SESSION } from '@/shared/constants/swing'
 import { BallTrajectory } from '@/components/BallTrajectory'
 import { saveSwing, saveVideoAnalysis } from '@/services/aiAnalysisApi'
@@ -51,7 +50,7 @@ function SwingPage() {
   const swingCount = useSessionStore(selectSwingCount)
   const videoAnalysisResults = useSessionStore(selectVideoAnalysisResults)
   const sessionUuid = useSessionStore(selectSessionUuid)
-  const { setStep, setFirstSwingProgress, setSecondSwingProgress, addSwingToHistory, setSwingCount } = useSessionStore()
+  const { setStep, setFirstSwingProgress, setSecondSwingProgress, addSwingToHistory, setSwingCount, addVideoAnalysisResult } = useSessionStore()
 
   const [phase, setPhase] = useState<SwingPhase>('preparing')
   const [currentMeasurement, setCurrentMeasurement] = useState(getInitialMeasurement())
@@ -67,18 +66,20 @@ function SwingPage() {
     stage: string;
     progress: number;
     error: string | null;
+    hasVideo: boolean; // 영상 데이터가 있는지 여부
+    videoAnalysisComplete: boolean; // 영상 분석이 완료되었는지 여부
   }>({
     isAnalyzing: false,
     currentVideo: null,
     stage: '',
     progress: 0,
     error: null,
+    hasVideo: false,
+    videoAnalysisComplete: false,
   })
 
   // 첫 번째 스윙인지 두 번째 스윙인지 확인
   const isFirstSwing = currentStep === 'swing-first'
-  const swingProgress = isFirstSwing ? firstSwingProgress : secondSwingProgress
-  const setSwingProgress = isFirstSwing ? setFirstSwingProgress : setSecondSwingProgress
 
   // 시스템 준비 완료 대기 (Electron 수집 모드 활성화 대기)
   useEffect(() => {
@@ -111,43 +112,74 @@ function SwingPage() {
 
     console.log('✅ 스윙 분석 리스너 등록')
     
+    // 영상 분석 결과 리스너 등록 확인
+    console.log('[swing] 📡 Registering onVideoResult listener...')
+    console.log('[swing] 📡 window.swingAnalysis.onVideoResult exists:', typeof window.swingAnalysis?.onVideoResult)
+    
     // 샷 데이터 수신 이벤트 - 각 샷마다 바로 solution으로 이동
     // 리스너를 먼저 등록 (이벤트를 놓치지 않도록)
     console.log('[swing] 📡 Registering onNewShot listener...')
     console.log('[swing] 📡 window.swingAnalysis.onNewShot exists:', typeof window.swingAnalysis?.onNewShot)
     const unsubNewShot = window.swingAnalysis.onNewShot(async (receivedData: any) => {
+      // 최신 상태 값 가져오기 (클로저 문제 방지)
+      const currentStore = useSessionStore.getState()
+      const currentSwingCount = currentStore.swingCount
+      const currentSessionUuid = currentStore.sessionUuid
+      
       console.log(`\n${'='.repeat(60)}`)
       console.log(`[swing] 🎯 onNewShot callback triggered!`)
-      console.log(`[swing] 📦 Received data:`, receivedData)
-      console.log(`${'='.repeat(60)}\n`)
-      console.log(`🎯 [${swingCount}번째 샷] 샷 데이터 수신 (전체):`, receivedData)
+      
+      // 궤적 데이터를 제외한 샷 데이터만 로그 출력
+      const logData = { ...receivedData }
+      if (logData.data && logData.data._Positions) {
+        logData.data = { ...logData.data, _Positions: `[${logData.data._Positions.length}개 좌표]` }
+      }
+      if (logData._Positions) {
+        logData._Positions = `[${logData._Positions.length}개 좌표]`
+      }
       
       // 데이터 구조 확인: { sessionUuid, data } 또는 직접 shotData
       const actualShotData = receivedData.data || receivedData
-      const actualSessionUuid = receivedData.sessionUuid || sessionUuid
+      const actualSessionUuid = receivedData.sessionUuid || currentSessionUuid
       
-      console.log(`[swing] 📊 실제 샷 데이터:`, actualShotData)
+      // 궤적 데이터를 제외한 샷 데이터만 로그 출력
+      const logShotData = { ...actualShotData }
+      if (logShotData._Positions) {
+        logShotData._Positions = `[${logShotData._Positions.length}개 좌표]`
+      }
       console.log(`[swing] 📋 세션 UUID:`, actualSessionUuid)
       
       // API 호출: 샷 데이터 저장
       if (actualSessionUuid) {
         try {
           console.log(`[swing] 📤 API 호출 시작: saveSwing(${actualSessionUuid})`)
-          // API 문서에 맞춰 필드명 수정 (camelCase, API 문서 참조)
-          const apiShotData = {
-            club: actualShotData.club !== undefined && actualShotData.club !== null ? actualShotData.club : 0, // 클럽 번호 (0-18, integer)
-            ballSpeed: actualShotData.ballSpeed || actualShotData.ball_speed || 0,
-            clubSpeed: actualShotData.clubSpeed || actualShotData.club_speed || 0,
-            launchAngle: actualShotData.launchAngle || actualShotData.launch_angle || 0,
-            sideSpin: actualShotData.sideSpin || actualShotData.side_spin || 0,
-            backSpin: actualShotData.backSpin || actualShotData.back_spin || 0,
-            carry: actualShotData.carry || actualShotData.carry_distance || 0,
-            dist: actualShotData.dist || actualShotData.total_distance || 0,
-            TargetDist: actualShotData.TargetDist || actualShotData.targetDist || 0,
-            shot_shape: actualShotData.shotShape || actualShotData.shot_shape || 'straight',
+          // 모든 샷 데이터 필드를 그대로 전송 (필터링하지 않음)
+          // 단, _Positions는 제외 (궤적 데이터는 너무 크므로 API로 전송하지 않음)
+          // 소수점이 있는 숫자 필드는 1자리로 제한
+          const apiShotData: any = {}
+          
+          // 원본 데이터의 모든 필드를 복사 (단, _Positions 제외)
+          Object.keys(actualShotData).forEach(key => {
+            // _Positions는 API 전송에서 제외
+            if (key === '_Positions') {
+              return
+            }
+            
+            const value = actualShotData[key]
+            // 숫자 필드 중 소수점이 있는 경우 1자리로 제한
+            if (typeof value === 'number' && !Number.isInteger(value) && key !== 'club' && key !== 'shotCount' && key !== 'apexCount' && key !== 'carryCount' && key !== 'posCount') {
+              apiShotData[key] = Number(value.toFixed(1))
+            } else {
+              apiShotData[key] = value
+            }
+          })
+          
+          // club 필드가 없거나 null이면 0으로 설정
+          if (apiShotData.club === undefined || apiShotData.club === null) {
+            apiShotData.club = 0
           }
           
-          console.log(`[swing] 📋 API 전송 데이터 (API 문서 기준):`, apiShotData)
+          console.log(`[swing] 📋 API 전송 데이터 (궤적 제외):`, apiShotData)
           console.log(`[swing] 📤 API 전송 데이터:`, apiShotData)
           
           const response = await saveSwing(actualSessionUuid, apiShotData as any)
@@ -167,6 +199,7 @@ function SwingPage() {
         launchAngle: actualShotData.launchAngle || actualShotData.launch_angle || '0',
         direction: actualShotData.azimuth?.toFixed(1) || '0',
         lateralDistance: actualShotData.carrySide?.toFixed(1) || '0',
+        distance: Number(actualShotData.dist || actualShotData.total_distance || actualShotData.carry || 0), // 비거리 데이터를 숫자로 저장
         sideSpin: actualShotData.sideSpin || actualShotData.side_spin || '0',
         backSpin: actualShotData.backSpin || actualShotData.back_spin || '0',
         ballFlight: actualShotData.shotShape || 'straight',
@@ -176,32 +209,104 @@ function SwingPage() {
       
       // 2. 볼 궤적 업데이트 (배열에 추가)
       if (actualShotData._Positions && Array.isArray(actualShotData._Positions)) {
-        console.log(`   📍 볼 궤적 데이터 수신: ${actualShotData._Positions.length}개 좌표`)
+        // 궤적 데이터는 로그에 출력하지 않음
         setBallTrajectories(prev => [...prev, actualShotData._Positions])
       }
       
-      // 3. 진행률 업데이트 (체크박스)
-      const nextProgress = swingProgress + 1
-      setSwingProgress(nextProgress)
-      console.log(`   ✅ 체크박스 업데이트: ${nextProgress}/${SWING_COUNT_PER_SESSION}`)
+      // 3. 진행률 업데이트 (체크박스) - 최신 값 사용
+      // Zustand store에서 최신 값을 직접 가져오기
+      const store = useSessionStore.getState()
+      const currentIsFirstSwing = store.currentStep === 'swing-first'
+      const currentProgress = currentIsFirstSwing ? store.firstSwingProgress : store.secondSwingProgress
+      const nextProgress = currentProgress + 1
       
-      // 4. Phase를 loading으로 변경하여 solution으로 이동 준비
-      console.log(`   → loading phase로 전환`)
-      setPhase('loading')
+      if (currentIsFirstSwing) {
+        setFirstSwingProgress(nextProgress)
+      } else {
+        setSecondSwingProgress(nextProgress)
+      }
+      
+      // 4. 모든 샷 데이터를 받았는지 확인
+      if (nextProgress >= SWING_COUNT_PER_SESSION) {
+        // 모든 샷 데이터 수신 완료 → SwingData 생성 및 히스토리에 추가
+        console.log(`   ✅ shot Data received (${nextProgress}/${SWING_COUNT_PER_SESSION})`)
+        
+        // 현재 measurements 배열에서 SwingData 생성
+        const currentMeasurements = [...measurements, measurement]
+        const swingNumber = currentStore.swingCount
+        
+        // 평균값 계산
+        const avgClubSpeed = currentMeasurements.reduce((sum, m) => sum + Number(m.clubSpeed || 0), 0) / currentMeasurements.length
+        const avgBallSpeed = currentMeasurements.reduce((sum, m) => sum + Number(m.ballSpeed || 0), 0) / currentMeasurements.length
+        const avgDistance = currentMeasurements.reduce((sum, m) => {
+          // distance는 이미 숫자이거나 문자열일 수 있으므로 Number로 변환
+          const dist = typeof m.distance === 'number' ? m.distance : Number(m.distance || 0)
+          return sum + dist
+        }, 0) / currentMeasurements.length
+        const avgAngle = currentMeasurements.reduce((sum, m) => sum + Number(m.launchAngle || 0), 0) / currentMeasurements.length
+        const avgSpin = currentMeasurements.reduce((sum, m) => sum + (Number(m.backSpin || 0) + Number(m.sideSpin || 0)), 0) / currentMeasurements.length
+        
+        // SwingMeasurement 형식으로 변환
+        const swingMeasurements = currentMeasurements.map((m, idx) => ({
+          swingNumber: swingNumber,
+          clubSpeed: Number(m.clubSpeed || 0),
+          ballSpeed: Number(m.ballSpeed || 0),
+          distance: Number(m.distance || 0),
+          angle: Number(m.launchAngle || 0),
+          spin: Number(m.backSpin || 0) + Number(m.sideSpin || 0),
+          timestamp: Date.now() + idx * 1000, // 각 샷마다 1초 간격
+        }))
+        
+        // SwingData 생성
+        const swingData = {
+          swingNumber,
+          measurements: swingMeasurements,
+          averages: {
+            clubSpeed: avgClubSpeed,
+            ballSpeed: avgBallSpeed,
+            distance: avgDistance,
+            angle: avgAngle,
+            spin: avgSpin,
+          },
+          completedAt: Date.now(),
+        }
+        
+        console.log(`   📊 SwingData 생성:`, swingData)
+        
+        // 히스토리에 추가
+        addSwingToHistory(swingData)
+        
+        // 첫 번째 스윙이고 영상 분석이 필요한 경우 영상 분석 결과 대기
+        const isFirstSwing = currentStore.currentStep === 'swing-first'
+        const hasVideoData = videoAnalysisStatus.isAnalyzing || videoAnalysisStatus.hasVideo
+        
+        console.log(`   → loading phase로 전환 (영상 분석 대기: ${isFirstSwing && hasVideoData})`)
+        // setTimeout으로 상태 업데이트 후 phase 변경
+        setTimeout(() => {
+          setPhase('loading')
+        }, 100)
+      } else {
+        // 아직 더 받아야 함 → swinging phase 유지
+        console.log(`   ⏳ 아직 ${SWING_COUNT_PER_SESSION - nextProgress}개 더 필요 (${nextProgress}/${SWING_COUNT_PER_SESSION})`)
+        // phase는 'swinging'으로 유지 (다음 샷 대기)
+      }
     })
 
-    const unsubStart = window.swingAnalysis.onVideoAnalysisStart((data: any) => {
+    const unsubStart = window.swingAnalysis.onVideoAnalysisStart?.((data: any) => {
       console.log(`🎬 영상 분석 시작: ${data.videoType}`)
-      setVideoAnalysisStatus({
+      setVideoAnalysisStatus(prev => ({
+        ...prev,
         isAnalyzing: true,
+        hasVideo: true, // 영상 데이터가 있음
         currentVideo: data.videoType,
         stage: '영상 분석 준비 중...',
         progress: 0,
         error: null,
-      })
+        videoAnalysisComplete: false,
+      }))
     })
 
-    const unsubProgress = window.swingAnalysis.onVideoAnalysisProgress((data: any) => {
+    const unsubProgress = window.swingAnalysis.onVideoAnalysisProgress?.((data: any) => {
       console.log(`⏳ 영상 분석 진행: ${data.videoType} - ${data.stage} ${data.progress}%`)
       setVideoAnalysisStatus(prev => ({
         ...prev,
@@ -210,57 +315,85 @@ function SwingPage() {
       }))
     })
 
-    const unsubComplete = window.swingAnalysis.onVideoAnalysisComplete((data: any) => {
+    const unsubComplete = window.swingAnalysis.onVideoAnalysisComplete?.((data: any) => {
       console.log(`✅ 영상 분석 완료: ${data.videoType}`)
       setVideoAnalysisStatus(prev => ({
         ...prev,
         stage: '분석 완료!',
         progress: 100,
+        videoAnalysisComplete: true, // 영상 분석 완료 표시
       }))
-      // 2초 후 상태 초기화
-      setTimeout(() => {
-        setVideoAnalysisStatus(prev => ({
-          ...prev,
-          isAnalyzing: false,
-          currentVideo: null,
-        }))
-      }, 2000)
     })
 
-    const unsubError = window.swingAnalysis.onVideoAnalysisError((data: any) => {
+    const unsubError = window.swingAnalysis.onVideoAnalysisError?.((data: any) => {
       console.error(`❌ 영상 분석 에러: ${data.videoType} - ${data.error}`)
-      setVideoAnalysisStatus({
+      setVideoAnalysisStatus(prev => ({
+        ...prev,
         isAnalyzing: false,
         currentVideo: data.videoType,
         stage: '분석 실패',
         progress: 0,
         error: data.error,
-      })
+        videoAnalysisComplete: true, // 에러 발생 시에도 완료 처리
+      }))
     })
 
     // 영상 분석 결과 수신 및 API 전송
     const unsubVideoResult = window.swingAnalysis.onVideoResult(async (data: any) => {
-      console.log(`[swing] 🎬 영상 분석 결과 수신:`, data)
+      console.log(`\n${'='.repeat(60)}`)
+      console.log(`[swing] 🎬 영상 분석 결과 수신 (onVideoResult 콜백)`)
+      console.log(`[swing] 📦 수신된 데이터:`, {
+        hasSessionUuid: !!data?.sessionUuid,
+        hasResults: !!data?.results,
+        hasFront: !!data?.results?.front,
+        hasSide: !!data?.results?.side,
+        sessionUuid: data?.sessionUuid,
+      })
+      console.log(`${'='.repeat(60)}\n`)
       
       const { sessionUuid, results } = data
       
       if (!sessionUuid || !results) {
-        console.error(`[swing] ⚠️ 영상 분석 결과 데이터 불완전:`, data)
+        console.error(`[swing] ⚠️ 영상 분석 결과 데이터 불완전:`)
+        console.error(`[swing]   sessionUuid:`, sessionUuid)
+        console.error(`[swing]   results:`, results)
+        console.error(`[swing]   전체 data:`, data)
         return
       }
+      
+      console.log(`[swing] ✅ 데이터 검증 통과 - 처리 시작`)
 
-      // 각 영상 분석 결과를 API로 전송
+      // 각 영상 분석 결과를 store에 추가하고 API로 전송
       try {
+        console.log(`[swing] 📊 영상 분석 결과 전체 데이터:`, results)
+        
         // 정면 영상 분석 결과
         if (results.front) {
-          console.log(`[swing] 📤 정면 영상 분석 결과 API 전송 중...`)
-          const frontResult = results.front.result?.value || results.front.result?.analysis_result || results.front
-          console.log(`[swing] 📋 정면 분석 결과 데이터:`, frontResult)
+          console.log(`[swing] 📤 정면 영상 분석 결과 처리 중...`)
+          console.log(`[swing] 📋 정면 원본 데이터:`, results.front)
           
+          // 데이터 구조 확인: results.front는 { value: {...}, result_code: ... } 형태일 수 있음
+          const frontResult = results.front.value || results.front.result?.value || results.front.result?.analysis_result || results.front
+          const frontResultCode = results.front.result_code ?? results.front.result?.result_code ?? 0
+          
+          console.log(`[swing] 📋 정면 분석 결과 데이터 (파싱 후):`, frontResult)
+          console.log(`[swing] 📋 정면 result_code:`, frontResultCode)
+          
+          // Store에 추가
+          addVideoAnalysisResult({
+            videoType: 'front',
+            result: {
+              result_code: frontResultCode,
+              value: frontResult,
+            },
+          })
+          console.log(`[swing] ✅ 정면 영상 분석 결과 Store에 추가 완료`)
+          
+          // API로 전송
           await saveVideoAnalysis(
             sessionUuid,
             1, // 첫 번째 스윙
-            results.front.result?.result_code ?? 0, // result_code (0 = 성공)
+            frontResultCode, // result_code (0 = 성공)
             frontResult // analysis_result (API 문서 구조)
           )
           console.log(`[swing] ✅ 정면 영상 분석 결과 API 전송 완료`)
@@ -268,21 +401,60 @@ function SwingPage() {
 
         // 측면 영상 분석 결과
         if (results.side) {
-          console.log(`[swing] 📤 측면 영상 분석 결과 API 전송 중...`)
-          const sideResult = results.side.result?.value || results.side.result?.analysis_result || results.side
-          console.log(`[swing] 📋 측면 분석 결과 데이터:`, sideResult)
+          console.log(`[swing] 📤 측면 영상 분석 결과 처리 중...`)
+          console.log(`[swing] 📋 측면 원본 데이터:`, results.side)
           
+          // 데이터 구조 확인: results.side는 { value: {...}, result_code: ... } 형태일 수 있음
+          const sideResult = results.side.value || results.side.result?.value || results.side.result?.analysis_result || results.side
+          const sideResultCode = results.side.result_code ?? results.side.result?.result_code ?? 0
+          
+          console.log(`[swing] 📋 측면 분석 결과 데이터 (파싱 후):`, sideResult)
+          console.log(`[swing] 📋 측면 result_code:`, sideResultCode)
+          
+          // Store에 추가
+          addVideoAnalysisResult({
+            videoType: 'side',
+            result: {
+              result_code: sideResultCode,
+              value: sideResult,
+            },
+          })
+          console.log(`[swing] ✅ 측면 영상 분석 결과 Store에 추가 완료`)
+          
+          // API로 전송
           await saveVideoAnalysis(
             sessionUuid,
             1, // 첫 번째 스윙
-            results.side.result?.result_code ?? 0, // result_code (0 = 성공)
+            sideResultCode, // result_code (0 = 성공)
             sideResult // analysis_result (API 문서 구조)
           )
           console.log(`[swing] ✅ 측면 영상 분석 결과 API 전송 완료`)
         }
+        
+        // 모든 영상 분석 결과 처리 완료 후 상태 업데이트
+        const hasFront = !!results.front
+        const hasSide = !!results.side
+        const allComplete = (hasFront && hasSide) || (hasFront && !hasSide) || (!hasFront && hasSide)
+        
+        if (allComplete) {
+          console.log(`[swing] ✅ 모든 영상 분석 결과 처리 완료`)
+          setVideoAnalysisStatus(prev => ({
+            ...prev,
+            videoAnalysisComplete: true,
+            isAnalyzing: false,
+          }))
+        }
       } catch (error: any) {
-        console.error(`[swing] ❌ 영상 분석 결과 API 전송 실패:`, error)
+        console.error(`[swing] ❌ 영상 분석 결과 처리 실패:`, error)
         console.error(`[swing] 에러 상세:`, error.message)
+        console.error(`[swing] 에러 스택:`, error.stack)
+        // 에러 발생 시에도 완료 처리 (에러 상태로 표시)
+        setVideoAnalysisStatus(prev => ({
+          ...prev,
+          videoAnalysisComplete: true,
+          isAnalyzing: false,
+          error: error.message,
+        }))
       }
     })
 
@@ -341,7 +513,7 @@ function SwingPage() {
       unsubError()
       unsubVideoResult()
     }
-  }, [swingCount, sessionUuid]) // sessionUuid가 변경되면 다시 실행
+  }, [sessionUuid]) // sessionUuid가 변경되면 다시 실행 (swingCount 제거 - 리스너는 한 번만 등록)
 
   useEffect(() => {
     console.log('[swing] 첫번째 useEffect, currentStep:', currentStep, 'phase:', phase)
@@ -371,9 +543,25 @@ function SwingPage() {
   useEffect(() => {
     if (phase !== 'loading') return
 
-    // 샷 데이터만 받으면 바로 solution으로 이동
-    // 영상 분석은 백그라운드에서 진행되고, 완료되면 자동으로 업데이트됨
-    console.log('[swing] Loading phase - 샷 데이터 수신 완료, solution으로 이동')
+    // 최신 상태 값 가져오기
+    const currentStore = useSessionStore.getState()
+    const currentIsFirstSwing = currentStore.currentStep === 'swing-first'
+    
+    // 첫 번째 스윙이고 영상 데이터가 있는 경우 영상 분석 완료 대기
+    const shouldWaitForVideo = currentIsFirstSwing && videoAnalysisStatus.hasVideo
+    
+    if (shouldWaitForVideo && !videoAnalysisStatus.videoAnalysisComplete) {
+      // 영상 분석 완료 대기 중
+      console.log('[swing] Loading phase - 영상 분석 완료 대기 중...')
+      console.log(`[swing]   isAnalyzing: ${videoAnalysisStatus.isAnalyzing}`)
+      console.log(`[swing]   videoAnalysisComplete: ${videoAnalysisStatus.videoAnalysisComplete}`)
+      return // 영상 분석 완료까지 대기
+    }
+    
+    // 영상 분석 완료되었거나 영상이 없는 경우 솔루션으로 이동
+    console.log('[swing] Loading phase - 솔루션으로 이동 준비 완료')
+    console.log(`[swing]   shouldWaitForVideo: ${shouldWaitForVideo}`)
+    console.log(`[swing]   videoAnalysisComplete: ${videoAnalysisStatus.videoAnalysisComplete}`)
     
     // 짧은 딜레이 후 solution으로 이동 (UI 업데이트 시간 확보)
     const timer = setTimeout(() => {
@@ -383,18 +571,23 @@ function SwingPage() {
     return () => clearTimeout(timer)
 
     function navigateToSolution() {
-      console.log(`[swing] 솔루션으로 이동 시작 (${swingCount}번째 샷)`)
+      // 최신 상태 값 가져오기
+      const currentStore = useSessionStore.getState()
+      const currentSwingCount = currentStore.swingCount
+      const currentIsFirstSwing = currentStore.currentStep === 'swing-first'
+      
+      console.log(`[swing] 솔루션으로 이동 시작 (${currentSwingCount}번째 샷)`)
 
       // 스윙 카운트 증가 (다음 샷 준비)
-      setSwingCount(swingCount + 1)
+      setSwingCount(currentSwingCount + 1)
 
       // 첫 번째 샷: solution-video
       // 두 번째 이후 샷: solution-chart
-      if (isFirstSwing) {
+      if (currentIsFirstSwing) {
         console.log('[swing] 첫 번째 샷 → solution-video')
         setStep('solution-video')
       } else {
-        console.log(`[swing] ${swingCount}번째 샷 → solution-chart`)
+        console.log(`[swing] ${currentSwingCount}번째 샷 → solution-chart`)
         setStep('solution-chart')
       }
 
@@ -402,7 +595,7 @@ function SwingPage() {
       console.log('[swing] navigate(/analysis/solution)')
       navigate('/analysis/solution')
     }
-  }, [phase, navigate, isFirstSwing, setStep, measurements, swingCount, addSwingToHistory, setSwingCount, videoAnalysisResults])
+  }, [phase, navigate, setStep, setSwingCount, videoAnalysisStatus.hasVideo, videoAnalysisStatus.videoAnalysisComplete])
 
   // Phase 1: 시스템 준비 중
   if (phase === 'preparing') {
@@ -482,16 +675,19 @@ function SwingPage() {
       {/* 상단: SWING_COUNT_PER_SESSION개 체크박스 */}
       <div className="mb-8 animate-fade-in">
         <div className="flex justify-center gap-4 flex-wrap max-w-4xl mx-auto">
-          {Array.from({ length: SWING_COUNT_PER_SESSION }, (_, i) => i + 1).map((num) => (
+          {Array.from({ length: SWING_COUNT_PER_SESSION }, (_, i) => {
+            const num = i + 1
+            const currentProgress = isFirstSwing ? firstSwingProgress : secondSwingProgress
+            return (
             <div
               key={num}
               className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full border-4 transition-all duration-500 ${
-                num <= swingProgress
+                num <= currentProgress
                   ? "bg-linear-to-br from-green-400 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50 scale-110"
                   : "bg-slate-800 border-slate-600"
               }`}>
               {/* 체크 표시 */}
-              {num <= swingProgress && (
+              {num <= currentProgress && (
                 <div className="absolute inset-0 flex items-center justify-center animate-scale-in">
                   <svg
                     className="w-6 h-6 md:w-8 md:h-8 text-white"
@@ -508,7 +704,7 @@ function SwingPage() {
                 </div>
               )}
               {/* 번호 표시 (체크 전) */}
-              {num > swingProgress && (
+              {num > currentProgress && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-sm md:text-base font-bold text-gray-500">
                     {num}
@@ -516,7 +712,8 @@ function SwingPage() {
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -540,7 +737,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">클럽스피드 (m/s)</p>
                   <p className="text-3xl font-bold text-green-400">
-                    {currentMeasurement.clubSpeed}
+                    {Number(currentMeasurement.clubSpeed).toFixed(1)}
                   </p>
                 </div>
 
@@ -548,7 +745,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">볼스피드 (m/s)</p>
                   <p className="text-3xl font-bold text-green-400">
-                    {currentMeasurement.ballSpeed}
+                    {Number(currentMeasurement.ballSpeed).toFixed(1)}
                   </p>
                 </div>
 
@@ -556,7 +753,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">발사각 (°)</p>
                   <p className="text-3xl font-bold text-cyan-400">
-                    {currentMeasurement.launchAngle}
+                    {Number(currentMeasurement.launchAngle).toFixed(1)}
                   </p>
                 </div>
 
@@ -564,7 +761,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">방향각 (°)</p>
                   <p className="text-3xl font-bold text-cyan-400">
-                    {currentMeasurement.direction}
+                    {Number(currentMeasurement.direction).toFixed(1)}
                   </p>
                 </div>
 
@@ -572,7 +769,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">좌우거리 (m)</p>
                   <p className="text-3xl font-bold text-purple-400">
-                    {currentMeasurement.lateralDistance}
+                    {Number(currentMeasurement.lateralDistance).toFixed(1)}
                   </p>
                 </div>
 
@@ -580,7 +777,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">사이드스핀 (rpm)</p>
                   <p className="text-3xl font-bold text-purple-400">
-                    {currentMeasurement.sideSpin}
+                    {Number(currentMeasurement.sideSpin).toFixed(1)}
                   </p>
                 </div>
 
@@ -588,7 +785,7 @@ function SwingPage() {
                 <div className="bg-slate-800 rounded-2xl p-6 border-2 border-slate-700">
                   <p className="text-sm text-gray-400 mb-2">백스핀 (rpm)</p>
                   <p className="text-3xl font-bold text-orange-400">
-                    {currentMeasurement.backSpin}
+                    {Number(currentMeasurement.backSpin).toFixed(1)}
                   </p>
                 </div>
 
@@ -634,4 +831,11 @@ function SwingPage() {
         }
 
         .animate-scale-in {
-          animation: scale-in 
+          animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+      `}</style>
+    </div>
+  );
+}
+export default SwingPage
+

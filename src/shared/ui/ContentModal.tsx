@@ -37,7 +37,7 @@ export function ContentModal({
 
       {/* 풀스크린 컨테이너 */}
       <div className="fixed inset-0 flex items-center justify-center">
-        <Dialog.Panel className="relative w-full h-full overflow-auto">
+        <Dialog.Panel className="relative w-full h-full overflow-auto flex items-center justify-center">
           {/* 닫기 버튼 (옵션) */}
           {showCloseButton && (
             <button
@@ -59,8 +59,10 @@ export function ContentModal({
             </button>
           )}
 
-          {/* 컨텐츠 영역 (slot) - 전체 화면 */}
-          {children}
+          {/* 컨텐츠 영역 (slot) - 가운데 정렬 */}
+          <div className="w-full flex items-center justify-center min-h-full py-8">
+            {children}
+          </div>
         </Dialog.Panel>
       </div>
     </Dialog>

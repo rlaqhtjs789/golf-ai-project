@@ -27,6 +27,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // public 폴더의 파일들이 dist 루트로 복사되도록 보장
+    copyPublicDir: true,
     // Electron 환경에서 사용할 수 있도록 설정
     rollupOptions: {
       output: {
