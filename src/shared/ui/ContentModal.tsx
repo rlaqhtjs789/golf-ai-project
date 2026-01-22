@@ -38,10 +38,11 @@ export function ContentModal({
       {/* 풀스크린 컨테이너 */}
       <div className="fixed inset-0 flex items-center justify-center">
         <Dialog.Panel className="relative w-full h-full overflow-auto flex items-center justify-center">
-          {/* 닫기 버튼 (옵션) */}
+          {/* 닫기 버튼 (옵션) - Electron 드래그 영역 제외 */}
           {showCloseButton && (
             <button
               onClick={onClose}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               className="fixed top-6 right-6 z-10 p-3 rounded-full bg-slate-800/80 hover:bg-slate-700 transition-colors group shadow-xl"
               aria-label="닫기">
               <svg

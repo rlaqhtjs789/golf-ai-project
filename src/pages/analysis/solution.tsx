@@ -13,7 +13,7 @@ import { useSessionStore, selectCurrentStep, selectSwingHistory, selectSessionUu
 import { VideoContentModal } from '@/features/golf-session/ui/VideoContentModal'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { FreeMode } from 'swiper/modules'
-import { LineChart, Line, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import type { SwingData } from '@/features/golf-session/types/session.type'
 import { SWING_COUNT_PER_SESSION } from '@/shared/constants/swing'
 import { getSeverityInfo, CATEGORY_NAMES, getTopNProblems } from '@/shared/constants/swing-problems'
@@ -23,6 +23,7 @@ import { getSession, type Improvements } from '@/services/aiAnalysisApi'
 // TODO: GET /api/analysis/videos/{problemId} 에서 동적으로 로드
 // 현재는 샘플 영상 사용, API 연동 후 제거
 // public 폴더의 sample-swing-video*.mp4 파일들 사용 (빌드 시 dist로 자동 복사)
+
 const SAMPLE_VIDEO_URL = '/sample-swing-video.mp4'
 const SAMPLE_VIDEO_URL2 = '/sample-swing-video2.mp4'
 const SAMPLE_VIDEO_URL3 = '/sample-swing-video3.mp4'
@@ -400,7 +401,7 @@ function SolutionPage() {
   if (isVideoType) {
     return (
       <>
-        <div className="h-screen flex flex-col py-4 px-4 pb-32 overflow-hidden">
+        <div className="min-h-screen flex flex-col py-4 px-4 pb-32 overflow-y-auto">
           {/* 상단: 전환 버튼 */}
           <div className="mb-4 text-center">
             <button
@@ -602,7 +603,7 @@ function SolutionPage() {
           </div>
 
           {/* 하단: 맞춤 솔루션 영상 */}
-          <div className="flex-1 w-full flex flex-col min-h-0">
+          <div className="w-full flex flex-col">
             <h2 className="text-lg md:text-xl font-bold text-gray-100 mb-3 text-center flex-shrink-0">
               회원님을 위한 맞춤 솔루션 [ {(() => {
                 // 문제점 단계별 분류
@@ -652,7 +653,7 @@ function SolutionPage() {
             </h2>
 
             {/* Swiper 슬라이더 */}
-            <div className="flex-1 min-h-0">
+            <div>
               <Swiper
                 modules={[FreeMode]}
                 spaceBetween={12}
@@ -662,13 +663,12 @@ function SolutionPage() {
                   640: { slidesPerView: 6 },
                   1024: { slidesPerView: 6 },
                   1280: { slidesPerView: 6 },
-                }}
-                className="h-full">
+                }}>
               {MOCK_VIDEOS.map((video) => (
                 <SwiperSlide key={video.id}>
                   <button
                     onClick={() => setSelectedVideo(video)}
-                    className="group relative h-full bg-slate-800 rounded-xl overflow-hidden border-2 border-slate-700 transition-all w-full max-h-[280px]">
+                    className="group relative aspect-[9/16] bg-slate-800 rounded-xl overflow-hidden border-2 border-slate-700 transition-all w-full">
                     {/* 영상 썸네일 */}
                     {video.videoUrl ? (
                       <video
@@ -740,7 +740,7 @@ function SolutionPage() {
           </div>
 
           {/* 하단: 다시 스윙하러가기 버튼 */}
-          <div className="mt-4 mb-20 text-center mx-auto flex-shrink-0">
+          <div className="mt-12 mb-20 text-center mx-auto flex-shrink-0">
             <button
               onClick={handleRetrySwing}
               className="px-12 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-green-500/50">
@@ -941,9 +941,10 @@ function SolutionPage() {
               })}
             </div>
             <ResponsiveContainer width="100%" height={350}>
-              <LineChart
+              <BarChart
                 data={getDistanceTrendData(swingHistory)}
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
                 <XAxis
                   dataKey="shot"
@@ -964,27 +965,24 @@ function SolutionPage() {
                   }}
                   formatter={(value) => `${Number(value).toFixed(2)}m`}
                 />
-                {/* 동적으로 각 스윙마다 Line 추가 - 가시성 필터링 */}
+                {/* 동적으로 각 스윙마다 Bar 추가 - 가시성 필터링 */}
                 {swingHistory
                   .filter(swing => visibleSwings[swing.swingNumber])
                   .map((swing) => {
                     const originalIndex = swingHistory.indexOf(swing)
                     const color = colors[originalIndex % colors.length]
                     return (
-                      <Line
+                      <Bar
                         key={`swing-${swing.swingNumber}`}
-                        type="monotone"
                         dataKey={`swing${swing.swingNumber}`}
-                        stroke={color}
+                        fill={color}
                         name={`${swing.swingNumber}번째 스윙`}
-                        dot={{ fill: color, r: 5 }}
-                        activeDot={{ r: 7 }}
+                        radius={[4, 4, 0, 0]}
                         isAnimationActive={false}
-                        strokeWidth={2}
                       />
                     )
                   })}
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
